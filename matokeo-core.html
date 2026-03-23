@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="sw">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Matokeo Core v2.3 - Teacher Profile & Analytics</title>
+    
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.1.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.1.1/firebase-firestore-compat.js"></script>
+
+    <style>
+        :root {
+            --bg: #0a0f1e; --primary: #6366f1; --card: #1e293b;
+            --text: #e2e8f0; --border: #2d3748; --success: #22c55e;
+            --danger: #ef4444; --warning: #f59e0b; --info: #3b82f6;
+        }
+        body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', sans-serif; margin: 0; padding: 15px; }
+        .container { max-width: 900px; margin: 0 auto; }
+        .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 20px; margin-bottom: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
+        
+        /* Profile Header */
+        .profile-header { display: flex; align-items: center; gap: 15px; border-bottom: 2px solid var(--border); padding-bottom: 15px; margin-bottom: 20px; }
+        .avatar { width: 55px; height: 55px; background: var(--primary); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: bold; color: white; border: 2px solid var(--border); }
+        .profile-info { flex-grow: 1; }
+        .profile-info h3 { margin: 0; font-size: 18px; color: white; }
+        .profile-info p { margin: 2px 0; font-size: 13px; color: #94a3b8; }
+
+        /* Stats & Forms */
+        .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 20px; }
+        .stat-box { background: #0f172a; padding: 12px; border-radius: 8px; text-align: center; }
+        .stat-box h2 { margin: 5px 0; font-size: 20px; color: var(--primary); }
+        .stat-box p { margin: 0; font-size: 10px; color: #94a3b8; text-transform: uppercase; }
+
+        input, select, button { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border); background: #0f172a; color: white; margin-bottom: 10px; box-sizing: border-box; }
+        .btn-primary { background: var(--primary); cursor: pointer; border: none; font-weight: bold; }
+        .btn-outline { background: transparent; border: 1px solid var(--border); width: auto; padding: 5px 12px; font-size: 11px; }
+        .btn-whatsapp { background: #25D366; width: auto; padding: 6px 10px; font-size: 11px; margin: 0; }
+
+        /* Table */
+        .table-container { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; font-size: 14px; }
+        th { background: #161e2d; padding: 10px; text-align: left; color: #94a3b8; }
+        td { padding: 10px; border-bottom: 1px solid var(--border); }
+        .grade-badge { padding: 3px 7px; border-radius: 4px; font-weight: bold; font-size: 11px; }
+
+        #chartWrapper { height: 220px; margin-top: 15px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="card">
+        <div class="profile-header">
+            <div class="avatar" id="profInitial">M</div>
+            <div class="profile-info">
+                <h3 id="profNameDisplay">Mwalimu Emanuel</h3>
+                <p id="profSubDisplay">Somo: Hisabati & Sayansi</p>
+                <div style="display: flex; gap: 10px; margin-top: 5px;">
+                    <button class="btn-outline" onclick="editProfile()">Edit Profile</button>
+                    <button class="btn-outline" style="color: var(--danger);" onclick="logout()">Logout</button>
+                </div>
+            </div>
+            <div style="text-align: right;">
+                <span style="font-size: 10px; color: var(--success);">● Online</span>
+            </div>
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-box"><p>Wanafunzi</p><h2 id="countStudents">0</h2></div>
+            <div class="stat-box"><p>Wastani</p><h2 id="avgScore">0</h2></div>
+            <div class="stat-box"><p>Waliopita</p><h2 id="countPass">0</h2></div>
+        </div>
+        <div id="chartWrapper"><canvas id="gradeChart"></canvas></div>
+    </div>
+
+    <div class="card">
+        <h3 style="font-size: 16px;">📝 Ingiiza Matokeo Mpya</h3>
+        <input type="text" id="stdName" placeholder="Jina la Mwanafunzi">
+        <input type="text" id="parentPhone" placeholder="Namba ya Mzazi (07...)">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+            <select id="subject">
+                <option value="Hisabati">Hisabati</option>
+                <option value="English">English</option>
+                <option value="Kiswahili">Kiswahili</option>
+                <option value="Sayansi">Sayansi</option>
+            </select>
+            <input type="number" id="score" placeholder="Alama (0-50)">
+        </div>
+        <button class="btn-primary" onclick="saveData()">Hifadhi & Sawazisha 🚀</button>
+    </div>
+
+    <div class="card">
+        <h3 style="font-size: 16px;">📋 Orodha ya Matokeo</h3>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Jina</th>
+                        <th>Somo</th>
+                        <th>Score</th>
+                        <th>Daraja</th>
+                        <th>Tuma</th>
+                    </tr>
+                </thead>
+                <tbody id="resultsTableBody"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+    // FIREBASE CONFIG
+    const firebaseConfig = {
+        apiKey: "AIzaSyAc7SBF8CqBH0xgI1H1QQcRjEkM6Topfbc",
+        authDomain: "galactos-html.firebaseapp.com",
+        projectId: "galactos-html",
+        storageBucket: "galactos-html.firebasestorage.app",
+        messagingSenderId: "598731363864",
+        appId: "1:598731363864:web:d9da1927c4e589bfc5d56d"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+    let myChart;
+
+    // --- PROFILE LOGIC ---
+    function loadProfile() {
+        const name = localStorage.getItem('teacher_name') || "Mwalimu Mgeni";
+        const sub = localStorage.getItem('teacher_sub') || "Somo la Shule";
+        document.getElementById('profNameDisplay').innerText = name;
+        document.getElementById('profSubDisplay').innerText = "Somo: " + sub;
+        document.getElementById('profInitial').innerText = name.charAt(0).toUpperCase();
+    }
+
+    function editProfile() {
+        const n = prompt("Ingiza Jina Lako:", localStorage.getItem('teacher_name'));
+        const s = prompt("Somo Unalofundisha:", localStorage.getItem('teacher_sub'));
+        if(n && s) {
+            localStorage.setItem('teacher_name', n);
+            localStorage.setItem('teacher_sub', s);
+            loadProfile();
+        }
+    }
+
+    function logout() {
+        if(confirm("Je, unataka kutoka kwenye mfumo?")) {
+            localStorage.clear();
+            location.reload();
+        }
+    }
+
+    // --- DATA LOGIC ---
+    function getGrade(s) {
+        if (s >= 41) return { l: "A", c: "#22c55e" };
+        if (s >= 31) return { l: "B", c: "#3b82f6" };
+        if (s >= 21) return { l: "C", c: "#f59e0b" };
+        if (s >= 11) return { l: "D", c: "#f97316" };
+        return { l: "E", c: "#ef4444" };
+    }
+
+    async function saveData() {
+        const n = document.getElementById('stdName').value;
+        const p = document.getElementById('parentPhone').value;
+        const sub = document.getElementById('subject').value;
+        const s = parseInt(document.getElementById('score').value);
+
+        if(!n || !p || isNaN(s)) return alert("Jaza kila kitu!");
+
+        await db.collection("gx_results").add({
+            studentName: n, parentPhone: p, subject: sub, score: s,
+            timestamp: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        document.getElementById('stdName').value = "";
+        document.getElementById('score').value = "";
+    }
+
+    function sendWhatsApp(n, sub, s, g, p) {
+        let phone = p.trim();
+        if(phone.startsWith('0')) phone = '255' + phone.substring(1);
+        const msg = `*MATOKEO CORE REPORT*%0A%0A*Mwanafunzi:* ${n}%0A*Somo:* ${sub}%0A*Alama:* ${s}%0A*Daraja:* ${g}%0A%0A_Imetayarishwa na: ${localStorage.getItem('teacher_name') || 'Mwalimu'}_`;
+        window.open(`https://wa.me/${phone}?text=${msg}`, '_blank');
+    }
+
+    function updateUI(data) {
+        const body = document.getElementById('resultsTableBody');
+        body.innerHTML = "";
+        let total = 0, pass = 0, gCount = {A:0, B:0, C:0, D:0, E:0};
+
+        data.forEach(d => {
+            const gr = getGrade(d.score);
+            total += d.score;
+            gCount[gr.l]++;
+            if(gr.l === 'A' || gr.l === 'B') pass++;
+
+            body.innerHTML += `<tr>
+                <td>${d.studentName}</td>
+                <td>${d.subject}</td>
+                <td>${d.score}</td>
+                <td><span class="grade-badge" style="background:${gr.c}22; color:${gr.c}">${gr.l}</span></td>
+                <td><button class="btn-whatsapp" onclick="sendWhatsApp('${d.studentName}','${d.subject}',${d.score},'${gr.l}','${d.parentPhone}')">WA 📱</button></td>
+            </tr>`;
+        });
+
+        document.getElementById('countStudents').innerText = data.length;
+        document.getElementById('countPass').innerText = pass;
+        document.getElementById('avgScore').innerText = data.length ? (total/data.length).toFixed(1) : 0;
+
+        const ctx = document.getElementById('gradeChart').getContext('2d');
+        if(myChart) myChart.destroy();
+        myChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: ['A', 'B', 'C', 'D', 'E'],
+                datasets: [{ data: [gCount.A, gCount.B, gCount.C, gCount.D, gCount.E], backgroundColor: ['#22c55e','#3b82f6','#f59e0b','#f97316','#ef4444'] }]
+            },
+            options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}} }
+        });
+    }
+
+    // INITIALIZE
+    loadProfile();
+    db.collection("gx_results").orderBy("timestamp", "desc").onSnapshot(snap => {
+        const res = []; snap.forEach(doc => res.push(doc.data()));
+        updateUI(res);
+    });
+</script>
+</body>
+</html>
