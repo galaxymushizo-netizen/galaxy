@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="sw">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Matokeo Core v2.4 - Official School Edition</title>
+    
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.1.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.1.1/firebase-firestore-compat.js"></script>
+
+    <style>
+        :root {
+            --bg: #0a0f1e; --primary: #6366f1; --card: #1e293b;
+            --text: #e2e8f0; --border: #2d3748; --success: #22c55e;
+            --danger: #ef4444; --warning: #f59e0b;
+        }
+        body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', sans-serif; margin: 0; padding: 15px; }
+        .container { max-width: 900px; margin: 0 auto; }
+        .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 20px; margin-bottom: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
+        
+        /* Logo & Header */
+        .school-header { text-align: center; margin-bottom: 20px; }
+        .school-logo { width: 80px; height: 80px; border-radius: 50%; object-fit: cover; border: 3px solid var(--primary); margin-bottom: 10px; cursor: pointer; background: #0f172a; }
+        
+        /* Search Box */
+        .search-box { position: relative; margin-bottom: 15px; }
+        .search-box input { padding-left: 40px; background: #0f172a; border: 1px solid var(--primary); }
+        .search-icon { position: absolute; left: 15px; top: 12px; color: var(--primary); }
+
+        /* General UI */
+        .profile-header { display: flex; align-items: center; gap: 15px; padding-bottom: 15px; border-bottom: 1px solid var(--border); margin-bottom: 15px; }
+        .avatar { width: 50px; height: 50px; background: var(--primary); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 20px; }
+        .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 15px; }
+        .stat-box { background: #0f172a; padding: 10px; border-radius: 8px; text-align: center; border: 1px solid var(--border); }
+        .stat-box h2 { margin: 5px 0; font-size: 18px; color: var(--primary); }
+        
+        input, select, button { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border); background: #161e2d; color: white; margin-bottom: 10px; box-sizing: border-box; }
+        .btn-primary { background: var(--primary); border: none; font-weight: bold; cursor: pointer; }
+        .btn-wa { background: #25D366; width: auto; padding: 5px 10px; font-size: 11px; margin: 0; border: none; border-radius: 5px; cursor: pointer; }
+        
+        table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        th { background: #0f172a; padding: 10px; text-align: left; color: #94a3b8; }
+        td { padding: 10px; border-bottom: 1px solid var(--border); }
+        .badge { padding: 3px 6px; border-radius: 4px; font-weight: bold; font-size: 10px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="school-header">
+        <img id="schoolLogoImg" src="https://via.placeholder.com/80?text=LOGO" class="school-logo" onclick="changeLogo()" title="Click to change logo">
+        <h2 id="schoolName" style="margin: 5px 0; font-size: 20px;">Jina la Shule</h2>
+        <button class="btn-primary" style="width: auto; padding: 5px 15px; font-size: 11px;" onclick="editSchool()">Edit School Info</button>
+    </div>
+
+    <div class="card">
+        <div class="profile-header">
+            <div class="avatar" id="profInit">M</div>
+            <div style="flex-grow: 1;">
+                <h3 id="profName" style="margin: 0; font-size: 16px;">Mwalimu Emanuel</h3>
+                <p id="profSub" style="margin: 0; font-size: 12px; color: #94a3b8;">Somo: Hisabati</p>
+            </div>
+            <button class="btn-primary" style="width: auto; padding: 5px 10px; font-size: 11px;" onclick="editProfile()">Profile</button>
+        </div>
+        <div class="stats-grid">
+            <div class="stat-box"><p style="font-size: 10px; margin: 0;">TOTAL</p><h2 id="sCount">0</h2></div>
+            <div class="stat-box"><p style="font-size: 10px; margin: 0;">AVG</p><h2 id="sAvg">0</h2></div>
+            <div class="stat-box"><p style="font-size: 10px; margin: 0;">PASS</p><h2 id="sPass">0</h2></div>
+        </div>
+        <div style="height: 180px;"><canvas id="gradeChart"></canvas></div>
+    </div>
+
+    <div class="card">
+        <h3 style="font-size: 14px; margin-bottom: 10px;">📝 Ingiza Alama</h3>
+        <input type="text" id="stdName" placeholder="Jina la Mwanafunzi">
+        <input type="text" id="parentPhone" placeholder="Namba ya Mzazi">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+            <select id="subject">
+                <option value="Hisabati">Hisabati</option>
+                <option value="English">English</option>
+                <option value="Kiswahili">Kiswahili</option>
+                <option value="Sayansi">Sayansi</option>
+            </select>
+            <input type="number" id="score" placeholder="Alama (0-50)">
+        </div>
+        <button class="btn-primary" onclick="saveData()">Hifadhi Matokeo</button>
+    </div>
+
+    <div class="card">
+        <div class="search-box">
+            <span class="search-icon">🔍</span>
+            <input type="text" id="searchInput" placeholder="Tafuta mwanafunzi..." onkeyup="filterTable()">
+        </div>
+        <div style="overflow-x: auto;">
+            <table>
+                <thead>
+                    <tr><th>Mwanafunzi</th><th>Somo</th><th>Score</th><th>Daraja</th><th>Tuma</th></tr>
+                </thead>
+                <tbody id="resBody"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+    // FIREBASE CONFIG
+    const firebaseConfig = {
+        apiKey: "AIzaSyAc7SBF8CqBH0xgI1H1QQcRjEkM6Topfbc",
+        authDomain: "galactos-html.firebaseapp.com",
+        projectId: "galactos-html",
+        storageBucket: "galactos-html.firebasestorage.app",
+        messagingSenderId: "598731363864",
+        appId: "1:598731363864:web:d9da1927c4e589bfc5d56d"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+    let myChart; let allResults = [];
+
+    // --- SCHOOL & PROFILE LOGIC ---
+    function initApp() {
+        document.getElementById('schoolName').innerText = localStorage.getItem('sch_name') || "Shule ya Galaxy";
+        document.getElementById('schoolLogoImg').src = localStorage.getItem('sch_logo') || "https://via.placeholder.com/80?text=LOGO";
+        document.getElementById('profName').innerText = localStorage.getItem('t_name') || "Mwalimu Mushi";
+        document.getElementById('profSub').innerText = "Somo: " + (localStorage.getItem('t_sub') || "Hisabati");
+        document.getElementById('profInit').innerText = (localStorage.getItem('t_name') || "M").charAt(0);
+    }
+
+    function editSchool() {
+        const n = prompt("Jina la Shule:", localStorage.getItem('sch_name'));
+        if(n) { localStorage.setItem('sch_name', n); initApp(); }
+    }
+
+    function changeLogo() {
+        const url = prompt("Paste Link ya Picha ya Logo (URL):", localStorage.getItem('sch_logo'));
+        if(url) { localStorage.setItem('sch_logo', url); initApp(); }
+    }
+
+    function editProfile() {
+        const n = prompt("Jina la Mwalimu:", localStorage.getItem('t_name'));
+        const s = prompt("Somo lako:", localStorage.getItem('t_sub'));
+        if(n && s) { localStorage.setItem('t_name', n); localStorage.setItem('t_sub', s); initApp(); }
+    }
+
+    // --- SEARCH FILTER ---
+    function filterTable() {
+        const query = document.getElementById('searchInput').value.toLowerCase();
+        const filtered = allResults.filter(r => r.studentName.toLowerCase().includes(query));
+        updateUI(filtered);
+    }
+
+    // --- DATA LOGIC ---
+    function getGrade(s) {
+        if (s >= 41) return { l: "A", c: "#22c55e" };
+        if (s >= 31) return { l: "B", c: "#3b82f6" };
+        if (s >= 21) return { l: "C", c: "#f59e0b" };
+        if (s >= 11) return { l: "D", c: "#f97316" };
+        return { l: "E", c: "#ef4444" };
+    }
+
+    async function saveData() {
+        const n = document.getElementById('stdName').value;
+        const p = document.getElementById('parentPhone').value;
+        const sub = document.getElementById('subject').value;
+        const s = parseInt(document.getElementById('score').value);
+        if(!n || !p || isNaN(s)) return alert("Jaza kila kitu!");
+
+        await db.collection("gx_results").add({
+            studentName: n, parentPhone: p, subject: sub, score: s,
+            timestamp: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        document.getElementById('stdName').value = ""; document.getElementById('score').value = "";
+    }
+
+    function updateUI(data) {
+        const body = document.getElementById('resBody'); body.innerHTML = "";
+        let total = 0, pass = 0, gCount = {A:0, B:0, C:0, D:0, E:0};
+
+        data.forEach(d => {
+            const gr = getGrade(d.score);
+            total += d.score; gCount[gr.l]++; if(gr.l === 'A' || gr.l === 'B') pass++;
+            body.innerHTML += `<tr>
+                <td>${d.studentName}</td><td>${d.subject}</td><td>${d.score}</td>
+                <td><span class="badge" style="background:${gr.c}22; color:${gr.c}">${gr.l}</span></td>
+                <td><button class="btn-wa" onclick="sendWA('${d.studentName}','${d.subject}',${d.score},'${gr.l}','${d.parentPhone}')">WA</button></td>
+            </tr>`;
+        });
+
+        document.getElementById('sCount').innerText = data.length;
+        document.getElementById('sPass').innerText = pass;
+        document.getElementById('sAvg').innerText = data.length ? (total/data.length).toFixed(1) : 0;
+
+        const ctx = document.getElementById('gradeChart').getContext('2d');
+        if(myChart) myChart.destroy();
+        myChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: ['A', 'B', 'C', 'D', 'E'],
+                datasets: [{ data: [gCount.A, gCount.B, gCount.C, gCount.D, gCount.E], backgroundColor: ['#22c55e','#3b82f6','#f59e0b','#f97316','#ef4444'] }]
+            },
+            options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}} }
+        });
+    }
+
+    function sendWA(n, sub, s, g, p) {
+        let ph = p.trim(); if(ph.startsWith('0')) ph = '255' + ph.substring(1);
+        const sch = localStorage.getItem('sch_name') || "Shule";
+        const t = localStorage.getItem('t_name') || "Mwalimu";
+        const msg = `*RIPOTI YA MATOKEO - ${sch.toUpperCase()}*%0A%0A*Mwanafunzi:* ${n}%0A*Somo:* ${sub}%0A*Alama:* ${s}%0A*Daraja:* ${g}%0A%0A_Imetayarishwa na: ${t}_`;
+        window.open(`https://wa.me/${ph}?text=${msg}`, '_blank');
+    }
+
+    initApp();
+    db.collection("gx_results").orderBy("timestamp", "desc").onSnapshot(snap => {
+        allResults = []; snap.forEach(doc => allResults.push(doc.data()));
+        updateUI(allResults);
+    });
+</script>
+</body>
+          </html>
+          
