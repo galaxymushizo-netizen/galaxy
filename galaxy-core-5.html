@@ -1,0 +1,3072 @@
+<!DOCTYPE html>
+<html lang="sw">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Galaxy Core</title>
+<meta name="theme-color" content="#0a0f1e">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Galactos">
+<link rel="manifest" href="data:application/json,{%22name%22:%22Galaxy%20Core%22,%22short_name%22:%22Matokeo%22,%22start_url%22:%22.%2Fgalaxy-core.html%22,%22display%22:%22standalone%22,%22background_color%22:%22%230a0f1e%22,%22theme_color%22:%22%236366f1%22}">
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+<!-- SheetJS for Excel -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0a0f1e;color:#e2e8f0;font-family:'Segoe UI',sans-serif;min-height:100vh;max-width:680px;margin:0 auto;padding-bottom:80px}
+/* LOGIN */
+.login-wrap{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px}
+.login-logo{font-size:52px;margin-bottom:8px}
+.login-title{font-size:28px;font-weight:800;color:#a5b4fc;letter-spacing:-1px;margin-bottom:4px}
+.login-sub{font-size:13px;color:#475569;margin-bottom:32px}
+.login-card{width:100%;max-width:360px;background:#1e293b;border-radius:16px;padding:24px;border:1px solid #2d3748}
+.login-card label{font-size:12px;color:#64748b;font-weight:700;text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:6px}
+.login-card input{width:100%;background:#0a0f1e;border:1px solid #2d3748;border-radius:8px;padding:11px 14px;color:#e2e8f0;font-size:15px;outline:none;margin-bottom:16px}
+.login-card input:focus{border-color:#6366f1}
+.login-btn{width:100%;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;border:none;border-radius:10px;padding:13px;font-size:15px;font-weight:700;cursor:pointer}
+.login-err{color:#f87171;font-size:13px;text-align:center;margin-top:10px;display:none}
+.offline-badge{background:#f59e0b20;color:#f59e0b;border:1px solid #f59e0b40;border-radius:8px;padding:8px 12px;font-size:12px;text-align:center;margin-bottom:16px;display:none}
+/* HEADER */
+.header{background:linear-gradient(135deg,#1e293b,#0f172a);padding:14px 18px;border-bottom:1px solid #1e293b;display:flex;align-items:center;justify-content:space-between}
+.header-left h1{font-size:17px;font-weight:800;color:#a5b4fc;letter-spacing:-.5px}
+.header-left p{font-size:11px;color:#64748b;margin-top:2px}
+.header-right{display:flex;gap:8px;align-items:center}
+.logout-btn{background:#1e293b;border:1px solid #334155;color:#94a3b8;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer}
+.sync-dot{width:8px;height:8px;border-radius:50%;background:#22c55e;display:inline-block;margin-right:4px}
+.sync-dot.off{background:#ef4444}
+/* TABS */
+.tabs{display:flex;background:#0a0f1e;border-bottom:1px solid #1e293b;position:sticky;top:0;z-index:20;overflow-x:auto}
+.tab-btn{flex:1;min-width:65px;padding:12px 4px;background:none;border:none;border-bottom:2px solid transparent;color:#475569;font-size:11px;font-weight:500;cursor:pointer;white-space:nowrap}
+.tab-btn.active{border-bottom-color:#6366f1;color:#a5b4fc;font-weight:700}
+/* PAGES */
+.page{display:none;padding:16px}.page.active{display:block}
+/* CARDS */
+.card{background:#1e293b;border-radius:12px;padding:16px;margin-bottom:14px;border:1px solid #2d3748}
+.card-title{font-size:11px;color:#64748b;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px}
+/* FORMS */
+label{font-size:12px;color:#64748b;font-weight:600;display:block;margin-bottom:6px}
+input[type=text],input[type=number],input[type=password],select{width:100%;background:#0a0f1e;border:1px solid #2d3748;border-radius:8px;padding:10px 12px;color:#e2e8f0;font-size:14px;outline:none;-webkit-appearance:none}
+input:focus,select:focus{border-color:#6366f1}
+select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2364748b' d='M6 8L1 3h10z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:32px}
+/* BUTTONS */
+.btn{background:#6366f1;color:#fff;border:none;border-radius:8px;padding:10px 16px;font-size:13px;font-weight:700;cursor:pointer;transition:opacity .15s}
+.btn:active{opacity:.75}
+.btn-sm{padding:5px 10px;font-size:12px}
+.btn-danger{background:#7f1d1d;color:#fca5a5}
+.btn-full{width:100%;margin-top:12px;padding:12px;font-size:14px}
+/* ROWS */
+.row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #1e293b}
+.row:last-child{border-bottom:none}
+.row .name{flex:1;font-size:14px}
+/* SCORE */
+.score-input{width:68px;background:#0a0f1e;border:1px solid #2d3748;border-radius:8px;padding:8px 6px;color:#e2e8f0;font-size:15px;font-weight:700;text-align:center;outline:none}
+/* BADGE */
+.badge{border-radius:6px;padding:3px 9px;font-size:12px;font-weight:700;min-width:26px;text-align:center;display:inline-block}
+/* STATS */
+.stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+.stat-box{background:#0a0f1e;border-radius:10px;padding:14px;text-align:center}
+.stat-val{font-size:24px;font-weight:700;color:#a5b4fc}
+.stat-lbl{font-size:11px;color:#475569;margin-top:2px}
+/* TOP/BOTTOM */
+.top-bottom{display:flex;gap:8px;margin-bottom:12px}
+.top-box{flex:1;background:#052e16;border-radius:8px;padding:10px 12px}
+.bot-box{flex:1;background:#1c0a0a;border-radius:8px;padding:10px 12px}
+.box-tag{font-size:11px;font-weight:700;margin-bottom:2px}
+.box-name{font-size:13px;font-weight:600}
+.box-score{font-size:15px;font-weight:700;margin-top:2px}
+/* DIST */
+.dist-row{display:flex;align-items:center;gap:8px;margin-bottom:7px}
+.dist-bar-wrap{flex:1;background:#0a0f1e;border-radius:4px;height:8px;overflow:hidden}
+.dist-bar{height:8px;border-radius:4px;transition:width .4s}
+.dist-count{font-size:12px;color:#64748b;min-width:16px;text-align:right}
+/* RANK */
+.rank-row{display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid #1e293b}
+.rank-row:last-child{border-bottom:none}
+.rank-num{font-size:12px;color:#475569;min-width:24px}
+.rank-name{flex:1;font-size:13px}
+.section-sep{font-size:11px;color:#64748b;font-weight:700;margin:14px 0 8px;text-transform:uppercase;letter-spacing:.05em}
+/* EXPORT */
+.export-bar{display:flex;gap:8px;margin-bottom:12px}
+.btn-export{flex:1;padding:10px 8px;border:none;border-radius:10px;font-size:12px;font-weight:700;cursor:pointer}
+.btn-pdf{background:#be123c;color:#fff}
+.btn-rtf{background:#1d4ed8;color:#fff}
+/* CLASS CARDS */
+.class-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.class-card{background:#1e293b;border:1px solid #2d3748;border-radius:12px;padding:14px;cursor:pointer;transition:border-color .15s}
+.class-card:hover{border-color:#6366f1}
+.class-card h3{font-size:15px;font-weight:700;color:#e2e8f0;margin-bottom:4px}
+.class-card p{font-size:12px;color:#64748b}
+.cc-stats{display:flex;gap:8px;margin-top:10px}
+.cc-stat{flex:1;background:#0a0f1e;border-radius:6px;padding:6px;text-align:center}
+.cc-stat-val{font-size:14px;font-weight:700;color:#a5b4fc}
+.cc-stat-lbl{font-size:10px;color:#475569}
+/* TEACHER PILL */
+.teacher-pill{display:flex;align-items:center;gap:8px;padding:10px 12px;background:#0a0f1e;border-radius:8px;margin-bottom:8px;border:1px solid #2d3748}
+.tp-info{flex:1}
+.tp-name{font-size:14px;font-weight:600}
+.tp-class{font-size:12px;color:#64748b;margin-top:2px}
+/* MISC */
+.passmark-row{display:flex;gap:8px;align-items:center;margin-top:8px}
+.passmark-row label{margin:0;white-space:nowrap}
+.passmark-row input{width:70px}
+.back-btn{display:flex;align-items:center;gap:6px;background:none;border:none;color:#a5b4fc;font-size:13px;font-weight:600;cursor:pointer;padding:0;margin-bottom:14px}
+.toast{position:fixed;bottom:88px;left:50%;transform:translateX(-50%);background:#1e293b;border:1px solid #6366f1;color:#a5b4fc;padding:10px 22px;border-radius:20px;font-size:13px;font-weight:600;z-index:100;white-space:nowrap;opacity:0;transition:opacity .2s;pointer-events:none}
+.toast.show{opacity:1}
+.empty{color:#475569;font-size:13px;text-align:center;padding:20px 0}
+.loading{color:#64748b;font-size:13px;text-align:center;padding:30px 0}
+#install-btn{display:none;align-items:center;gap:6px;background:#6366f1;color:#fff;border:none;border-radius:8px;padding:6px 12px;font-size:11px;font-weight:700;cursor:pointer}
+
+/* ── WELCOME OVERLAY ── */
+.welcome-overlay{position:fixed;inset:0;background:#0a0f1e;z-index:999;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px;text-align:center;transition:opacity 0.5s}
+.welcome-overlay.fade-out{opacity:0;pointer-events:none}
+.welcome-logo{margin-bottom:16px;animation:pulse-glow 2s infinite}
+.welcome-title{font-size:32px;font-weight:900;color:#a5b4fc;letter-spacing:-1px;margin-bottom:8px}
+.welcome-sub{font-size:14px;color:#475569;margin-bottom:40px;line-height:1.6}
+.welcome-steps{width:100%;max-width:320px;margin-bottom:40px}
+.welcome-step{display:flex;align-items:center;gap:12px;padding:12px 16px;background:#1e293b;border-radius:12px;margin-bottom:10px;border:1px solid #2d3748;text-align:left;animation:slide-in 0.4s ease both}
+.welcome-step:nth-child(1){animation-delay:0.1s}
+.welcome-step:nth-child(2){animation-delay:0.25s}
+.welcome-step:nth-child(3){animation-delay:0.4s}
+.welcome-step-icon{font-size:22px;min-width:32px;text-align:center}
+.welcome-step-text{font-size:13px;color:#e2e8f0;font-weight:500}
+.welcome-step-text span{display:block;font-size:11px;color:#64748b;margin-top:2px;font-weight:400}
+.welcome-btn{background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;border:none;border-radius:14px;padding:16px 48px;font-size:16px;font-weight:800;cursor:pointer;letter-spacing:.5px;box-shadow:0 0 30px #6366f140}
+.welcome-btn:active{transform:scale(0.97)}
+@keyframes pulse-glow{0%,100%{filter:drop-shadow(0 0 12px #6366f1)}50%{filter:drop-shadow(0 0 28px #8b5cf6)}}
+@keyframes slide-in{from{opacity:0;transform:translateX(-20px)}to{opacity:1;transform:translateX(0)}}
+@media print{
+  body{background:#fff!important;color:#000!important;max-width:100%;padding:0;font-family:Arial,sans-serif}
+  .tabs,.export-bar,.back-btn,.logout-btn,.header,#install-btn{display:none!important}
+  .page{display:block!important;padding:0}
+  .card{background:#fff!important;border:1px solid #ccc!important;border-radius:0!important;margin-bottom:16px;page-break-inside:avoid}
+  .stat-box{background:#f5f5f5!important}.top-box{background:#f0fdf4!important}.bot-box{background:#fff1f2!important}
+  .dist-bar,.badge{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+}
+
+/* SEARCH */
+.search-wrap{position:relative;margin-bottom:8px}
+.search-icon{position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:14px;pointer-events:none;z-index:1}
+.search-input{width:100%;background:#1e293b;border:1px solid #2d3748;border-radius:8px;padding:10px 12px 10px 34px;color:#e2e8f0;font-size:14px;outline:none}
+.search-input:focus{border-color:#6366f1}
+.search-results{background:#1e293b;border:1px solid #2d3748;border-radius:10px;overflow:hidden;display:none;margin-top:4px}
+.search-result-item{padding:10px 14px;cursor:pointer;border-bottom:1px solid #2d3748;transition:background .15s}
+.search-result-item:last-child{border-bottom:none}
+.search-result-item:hover{background:#2d3748}
+.search-result-name{font-size:14px;font-weight:600;color:#e2e8f0;margin-bottom:2px}
+.search-result-class{font-size:11px;color:#64748b;margin-bottom:4px}
+.search-result-scores{display:flex;flex-wrap:wrap;gap:4px}
+.score-chip{font-size:11px;font-weight:600;padding:2px 8px;border-radius:20px}
+/* STUDENT DETAIL MODAL */
+.detail-overlay{position:fixed;inset:0;background:#00000080;z-index:200;display:none;align-items:center;justify-content:center;padding:16px}
+.detail-overlay.open{display:flex}
+.detail-modal{background:#1e293b;border-radius:16px;width:100%;max-width:420px;max-height:85vh;overflow-y:auto;border:1px solid #334155}
+.detail-modal-header{display:flex;justify-content:space-between;align-items:center;padding:14px 16px;border-bottom:1px solid #2d3748}
+.detail-close{background:none;border:none;color:#64748b;font-size:20px;cursor:pointer;line-height:1}
+/* EDIT MODAL */
+.edit-overlay{position:fixed;inset:0;background:#00000080;z-index:200;display:none;align-items:center;justify-content:center;padding:16px}
+.edit-overlay.open{display:flex}
+.edit-modal-box{background:#1e293b;border-radius:16px;width:100%;max-width:420px;max-height:85vh;overflow-y:auto;padding:20px;border:1px solid #334155}
+.edit-modal-box label{font-size:12px;color:#64748b;font-weight:600;display:block;margin-bottom:6px}
+
+
+/* HEADER ICON BUTTONS */
+.header-icon-btn{background:#1e293b;border:1px solid #334155;color:#94a3b8;border-radius:8px;padding:5px 10px;font-size:15px;cursor:pointer;transition:all .15s}
+.header-icon-btn:hover{background:#334155;color:#e2e8f0}
+.profile-btn{width:32px;height:32px;border-radius:50%!important;padding:0!important;background:linear-gradient(135deg,#6366f1,#8b5cf6)!important;color:#fff!important;font-weight:800;font-size:13px;display:inline-flex;align-items:center;justify-content:center;border:none!important;flex-shrink:0}
+/* PROFILE MODAL */
+.profile-avatar{width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;font-size:28px;font-weight:800;display:flex;align-items:center;justify-content:center;margin:0 auto 12px}
+.profile-field{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid #1e293b;font-size:13px}
+.profile-field:last-of-type{border-bottom:none}
+.profile-field .pf-label{color:#64748b;font-weight:600}
+.profile-field .pf-val{color:#e2e8f0;font-weight:500;text-align:right;max-width:180px;word-break:break-word}
+.profile-role-badge{display:inline-block;padding:3px 12px;border-radius:20px;font-size:11px;font-weight:800;letter-spacing:.05em;text-transform:uppercase}
+.role-admin{background:#6366f120;color:#a5b4fc;border:1px solid #6366f140}
+.role-teacher{background:#22c55e20;color:#86efac;border:1px solid #22c55e40}
+.role-headmaster{background:#f59e0b20;color:#fcd34d;border:1px solid #f59e0b40}
+/* SEARCH MODAL */
+.search-tab-btn{background:none;border:none;color:#64748b;font-size:12px;font-weight:600;padding:6px 12px;border-radius:6px;cursor:pointer;transition:all .15s;white-space:nowrap}
+.search-tab-btn.active{background:#6366f1;color:#fff}
+.search-modal-item{padding:12px 14px;border-bottom:1px solid #1e293b;cursor:pointer;transition:background .15s;border-radius:8px;margin-bottom:4px}
+.search-modal-item:hover{background:#1e293b}
+.search-modal-item:last-child{border-bottom:none;margin-bottom:0}
+.smi-name{font-size:14px;font-weight:700;color:#e2e8f0;margin-bottom:2px}
+.smi-sub{font-size:12px;color:#64748b;margin-bottom:5px}
+.smi-scores{display:flex;flex-wrap:wrap;gap:4px}
+.smi-chip{font-size:11px;font-weight:600;padding:2px 8px;border-radius:20px;border:1px solid transparent}
+.teacher-badge{display:inline-flex;align-items:center;gap:4px;background:#6366f120;color:#a5b4fc;border:1px solid #6366f130;border-radius:20px;padding:3px 10px;font-size:11px;font-weight:700}
+.empty-search{text-align:center;color:#475569;padding:32px 16px;font-size:13px}
+
+
+/* ── REGISTER SCREEN ── */
+#screen-register{display:none;min-height:100vh;align-items:center;justify-content:center;padding:24px;background:linear-gradient(135deg,#0a0f1e,#0f172a)}
+#screen-register.active{display:flex;flex-direction:column}
+.reg-card{width:100%;max-width:380px;background:#1e293b;border-radius:16px;padding:24px;border:1px solid #2d3748}
+.reg-card h2{font-size:20px;font-weight:800;color:#a5b4fc;margin-bottom:4px;text-align:center}
+.reg-card p{font-size:12px;color:#475569;text-align:center;margin-bottom:20px}
+.reg-back{background:none;border:none;color:#6366f1;font-size:13px;font-weight:600;cursor:pointer;margin-bottom:16px;display:flex;align-items:center;gap:4px}
+.step-bar{display:flex;gap:6px;margin-bottom:20px}
+.step-dot{flex:1;height:3px;border-radius:2px;background:#1e293b;transition:background .3s}
+.step-dot.done{background:#6366f1}
+.step-dot.active{background:#a5b4fc}
+/* ── PENDING BADGE ── */
+.pending-badge{display:inline-block;background:#f59e0b20;color:#f59e0b;border:1px solid #f59e0b40;border-radius:20px;padding:2px 10px;font-size:11px;font-weight:700}
+.approved-badge{display:inline-block;background:#22c55e20;color:#22c55e;border:1px solid #22c55e40;border-radius:20px;padding:2px 10px;font-size:11px;font-weight:700}
+.rejected-badge{display:inline-block;background:#ef444420;color:#ef4444;border:1px solid #ef444440;border-radius:20px;padding:2px 10px;font-size:11px;font-weight:700}
+/* ── PENDING APPROVAL CARD ── */
+.approval-card{background:#0a0f1e;border-radius:10px;padding:12px;margin-bottom:10px;border:1px solid #f59e0b40}
+.approval-card:last-child{margin-bottom:0}
+.ac-name{font-size:14px;font-weight:700;color:#e2e8f0;margin-bottom:2px}
+.ac-meta{font-size:12px;color:#64748b;margin-bottom:8px}
+.ac-actions{display:flex;gap:8px}
+/* ── TEACHER ACTIVITY ── */
+.ta-card{background:#0a0f1e;border-radius:10px;padding:12px 14px;margin-bottom:8px;border:1px solid #2d3748}
+.ta-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px}
+.ta-name{font-size:14px;font-weight:700;color:#e2e8f0}
+.ta-meta{font-size:11px;color:#64748b;margin-top:2px}
+.ta-stats{display:flex;gap:6px}
+.ta-stat{flex:1;background:#1e293b;border-radius:6px;padding:6px;text-align:center}
+.ta-stat-val{font-size:14px;font-weight:800;color:#a5b4fc}
+.ta-stat-lbl{font-size:9px;color:#475569;text-transform:uppercase;letter-spacing:.04em}
+.online-dot{width:7px;height:7px;border-radius:50%;background:#22c55e;display:inline-block;margin-right:4px;animation:pulse-dot 2s infinite}
+@keyframes pulse-dot{0%,100%{opacity:1}50%{opacity:.4}}
+/* ── NOTIFICATION BELL ── */
+.notif-wrap{position:relative}
+.notif-count{position:absolute;top:-4px;right:-4px;background:#ef4444;color:#fff;font-size:9px;font-weight:800;width:16px;height:16px;border-radius:50%;display:flex;align-items:center;justify-content:center;pointer-events:none}
+
+
+/* ── TEACHER DETAIL MODAL ── */
+.td-modal-body{padding:0}
+.td-avatar{width:64px;height:64px;border-radius:50%;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;font-size:26px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.td-header-card{display:flex;align-items:center;gap:14px;padding:18px 16px;border-bottom:1px solid #1e293b;background:linear-gradient(135deg,#0f172a,#1e293b)}
+.td-name{font-size:18px;font-weight:800;color:#e2e8f0}
+.td-role{font-size:12px;color:#64748b;margin-top:2px}
+.td-section{padding:14px 16px;border-bottom:1px solid #1e293b}
+.td-section-title{font-size:10px;color:#475569;font-weight:700;text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px}
+.td-field{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid #0f172a;font-size:13px}
+.td-field:last-child{border-bottom:none}
+.td-label{color:#64748b;font-weight:500}
+.td-val{color:#e2e8f0;font-weight:600;text-align:right}
+.td-stat-row{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:4px}
+.td-stat{background:#0a0f1e;border-radius:8px;padding:10px 6px;text-align:center}
+.td-stat-v{font-size:20px;font-weight:800;color:#a5b4fc}
+.td-stat-l{font-size:9px;color:#475569;text-transform:uppercase;letter-spacing:.05em;margin-top:2px}
+.td-student-row{display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid #0f172a;font-size:13px}
+.td-student-row:last-child{border-bottom:none}
+.td-score-chip{padding:2px 8px;border-radius:12px;font-size:11px;font-weight:700}
+.td-action-bar{display:flex;gap:8px;padding:14px 16px}
+.progress-bar-wrap{background:#0a0f1e;border-radius:4px;height:6px;overflow:hidden;flex:1;margin-left:8px}
+.progress-bar-fill{height:6px;border-radius:4px;transition:width .5s ease}
+
+
+/* ── APP LOADING OVERLAY ── */
+#app-loading{position:fixed;inset:0;background:#0a0f1e;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;transition:opacity .4s}
+#app-loading.fade{opacity:0;pointer-events:none}
+.loading-spinner{width:44px;height:44px;border:3px solid #1e293b;border-top-color:#6366f1;border-radius:50%;animation:spin .7s linear infinite}
+.loading-text{font-size:13px;color:#475569;font-weight:500}
+.loading-logo{font-size:42px;margin-bottom:4px}
+
+</style>
+</head>
+<body>
+
+<!-- ══ LOGIN ══ -->
+<!-- ══ APP LOADING ══ -->
+<div id="app-loading">
+  <div class="loading-logo">&#128218;</div>
+  <div class="loading-spinner"></div>
+  <div class="loading-text" id="loading-text">Inaanzisha Galaxy Core...</div>
+</div>
+
+<!-- ══ WELCOME OVERLAY ══ -->
+<div class="welcome-overlay" id="welcome-overlay">
+  <div class="welcome-logo">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" style="width:90px;height:90px">
+      <defs>
+        <linearGradient id="wbg" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" style="stop-color:#0d0d1a"/><stop offset="100%" style="stop-color:#1a1a2e"/>
+        </linearGradient>
+        <linearGradient id="wg" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" style="stop-color:#818cf8"/><stop offset="50%" style="stop-color:#6366f1"/><stop offset="100%" style="stop-color:#4f46e5"/>
+        </linearGradient>
+        <filter id="wglow"><feGaussianBlur stdDeviation="3" result="cb"/><feMerge><feMergeNode in="cb"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+      </defs>
+      <rect width="100" height="100" rx="24" fill="url(#wbg)"/>
+      <line x1="8" y1="8" x2="18" y2="8" stroke="#6366f1" stroke-width="2.5" opacity="0.8"/>
+      <line x1="8" y1="8" x2="8" y2="18" stroke="#6366f1" stroke-width="2.5" opacity="0.8"/>
+      <line x1="92" y1="8" x2="82" y2="8" stroke="#6366f1" stroke-width="2.5" opacity="0.8"/>
+      <line x1="92" y1="8" x2="92" y2="18" stroke="#6366f1" stroke-width="2.5" opacity="0.8"/>
+      <line x1="8" y1="92" x2="18" y2="92" stroke="#6366f1" stroke-width="2.5" opacity="0.8"/>
+      <line x1="8" y1="92" x2="8" y2="82" stroke="#6366f1" stroke-width="2.5" opacity="0.8"/>
+      <line x1="92" y1="92" x2="82" y2="92" stroke="#6366f1" stroke-width="2.5" opacity="0.8"/>
+      <line x1="92" y1="92" x2="92" y2="82" stroke="#6366f1" stroke-width="2.5" opacity="0.8"/>
+      <text x="50" y="68" text-anchor="middle" font-family="Arial Black,Impact,sans-serif" font-size="62" font-weight="900" fill="url(#wg)" filter="url(#wglow)">G</text>
+      <rect x="28" y="74" width="44" height="3" rx="1.5" fill="url(#wg)" opacity="0.9"/>
+    </svg>
+  </div>
+  <div class="welcome-title">MATOKEO CORE</div>
+  <div class="welcome-sub">Mfumo wa Kisasa wa Kusimamia<br>Matokeo ya Shule</div>
+  <div class="welcome-steps">
+    <div class="welcome-step">
+      <div class="welcome-step-icon">&#128274;</div>
+      <div class="welcome-step-text">Login Salama
+        <span>Admin na walimu wana akaunti zao tofauti</span>
+      </div>
+    </div>
+    <div class="welcome-step">
+      <div class="welcome-step-icon">&#128202;</div>
+      <div class="welcome-step-text">Uchambuzi wa Papo Hapo
+        <span>Matokeo, wastani, daraja — yote kiotomatiki</span>
+      </div>
+    </div>
+    <div class="welcome-step">
+      <div class="welcome-step-icon">&#127760;</div>
+      <div class="welcome-step-text">Real-Time Sync
+        <span>Mabadiliko yanaonekana mara moja kwa wote</span>
+      </div>
+    </div>
+  </div>
+  <button class="welcome-btn" onclick="dismissWelcome()">Anza Sasa &#8594;</button>
+</div>
+
+<div id="screen-login" class="login-wrap">
+  <div class="login-logo">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" style="width:80px;height:80px;filter:drop-shadow(0 0 16px #6366f1)">
+  <defs>
+    <linearGradient id="bg2" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0d0d1a"/><stop offset="100%" style="stop-color:#1a1a2e"/>
+    </linearGradient>
+    <linearGradient id="gg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#818cf8"/><stop offset="50%" style="stop-color:#6366f1"/><stop offset="100%" style="stop-color:#4f46e5"/>
+    </linearGradient>
+    <filter id="glow2"><feGaussianBlur stdDeviation="2.5" result="cb"/><feMerge><feMergeNode in="cb"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  </defs>
+  <rect width="100" height="100" rx="24" fill="url(#bg2)"/>
+  <line x1="8" y1="8" x2="18" y2="8" stroke="#6366f1" stroke-width="2" opacity="0.7"/>
+  <line x1="8" y1="8" x2="8" y2="18" stroke="#6366f1" stroke-width="2" opacity="0.7"/>
+  <line x1="92" y1="8" x2="82" y2="8" stroke="#6366f1" stroke-width="2" opacity="0.7"/>
+  <line x1="92" y1="8" x2="92" y2="18" stroke="#6366f1" stroke-width="2" opacity="0.7"/>
+  <line x1="8" y1="92" x2="18" y2="92" stroke="#6366f1" stroke-width="2" opacity="0.7"/>
+  <line x1="8" y1="92" x2="8" y2="82" stroke="#6366f1" stroke-width="2" opacity="0.7"/>
+  <line x1="92" y1="92" x2="82" y2="92" stroke="#6366f1" stroke-width="2" opacity="0.7"/>
+  <line x1="92" y1="92" x2="92" y2="82" stroke="#6366f1" stroke-width="2" opacity="0.7"/>
+  <text x="50" y="68" text-anchor="middle" font-family="Arial Black,Impact,sans-serif" font-size="62" font-weight="900" fill="url(#gg)" filter="url(#glow2)">G</text>
+  <rect x="28" y="74" width="44" height="3" rx="1.5" fill="url(#gg)" opacity="0.8"/>
+</svg>
+  </div>
+  <div class="login-title">MATOKEO CORE</div>
+  <div class="login-sub">Mfumo wa Matokeo ya Shule</div>
+  <div class="login-card">
+    <div class="offline-badge" id="offline-badge">&#9888; Hakuna mtandao — data inaweza kuwa ya zamani</div>
+    <label>Jina la Mtumiaji</label>
+    <input type="text" id="login-user" placeholder="username..." autocomplete="off">
+    <label>Nywila</label>
+    <input type="password" id="login-pass" placeholder="password..." onkeydown="if(event.key==='Enter')doLogin()">
+    <button class="login-btn" onclick="doLogin()">Ingia &#8594;</button>
+    <div class="login-err" id="login-err">Jina au nywila si sahihi</div>
+    <div style="text-align:center;margin-top:16px;padding-top:16px;border-top:1px solid #2d3748">
+      <span style="font-size:12px;color:#475569">Mwalimu mpya? </span>
+      <button onclick="showRegister()" style="background:none;border:none;color:#6366f1;font-size:12px;font-weight:700;cursor:pointer;text-decoration:underline">Jiandikishe hapa</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ REGISTER SCREEN ══ -->
+<div id="screen-register">
+  <button class="reg-back" onclick="showLogin()">&#8592; Rudi Login</button>
+  <div class="reg-card">
+    <div style="text-align:center;margin-bottom:12px;font-size:36px">&#127979;</div>
+    <h2>Jiandikishe kama Mwalimu</h2>
+    <p>Baada ya kujiandikisha, admin atakuhakikishia</p>
+    <div class="step-bar">
+      <div class="step-dot active" id="step-1"></div>
+      <div class="step-dot" id="step-2"></div>
+      <div class="step-dot" id="step-3"></div>
+    </div>
+
+    <!-- Step 1: Account info -->
+    <div id="reg-step-1">
+      <div style="font-size:11px;color:#64748b;font-weight:700;text-transform:uppercase;margin-bottom:12px">Hatua 1 / 3 — Taarifa za Akaunti</div>
+      <label>Jina Lako Kamili</label>
+      <input type="text" id="reg-name" placeholder="Mfano: Amina Hassan" style="margin-bottom:12px">
+      <label>Username (utakayotumia kuingia)</label>
+      <input type="text" id="reg-username" placeholder="Mfano: amina.hassan" style="margin-bottom:12px" oninput="this.value=this.value.toLowerCase().replace(/\s/g,'')">
+      <label>Nywila</label>
+      <input type="password" id="reg-pass" placeholder="Angalau herufi 6" style="margin-bottom:12px" autocomplete="new-password">
+      <label>Thibitisha Nywila</label>
+      <input type="password" id="reg-pass2" placeholder="Rudia nywila" style="margin-bottom:16px" autocomplete="new-password">
+      <button class="btn btn-full" style="margin-top:0" onclick="regStep1()">Endelea &#8594;</button>
+    </div>
+
+    <!-- Step 2: Class & Subject -->
+    <div id="reg-step-2" style="display:none">
+      <div style="font-size:11px;color:#64748b;font-weight:700;text-transform:uppercase;margin-bottom:12px">Hatua 2 / 3 — Darasa na Somo</div>
+      <label>Darasa Unalofundisha</label>
+      <select id="reg-class" style="margin-bottom:12px"></select>
+      <label>Somo Unalofundisha</label>
+      <input type="text" id="reg-subject" placeholder="Mfano: Hisabati, Kiingereza..." style="margin-bottom:6px" oninput="showRegSubjectSuggestions(this.value)">
+      <div id="reg-subject-suggestions" style="margin-bottom:16px;display:flex;flex-wrap:wrap;gap:4px"></div>
+      <button class="btn btn-full" style="margin-top:0" onclick="regStep2()">Endelea &#8594;</button>
+      <button onclick="regGoBack(1)" style="background:none;border:none;color:#64748b;font-size:12px;cursor:pointer;width:100%;text-align:center;margin-top:8px">&#8592; Rudi nyuma</button>
+    </div>
+
+    <!-- Step 3: Confirm -->
+    <div id="reg-step-3" style="display:none">
+      <div style="font-size:11px;color:#64748b;font-weight:700;text-transform:uppercase;margin-bottom:12px">Hatua 3 / 3 — Thibitisha</div>
+      <div id="reg-summary" style="background:#0a0f1e;border-radius:10px;padding:14px;margin-bottom:16px"></div>
+      <button class="btn btn-full" style="margin-top:0;background:linear-gradient(135deg,#6366f1,#8b5cf6)" onclick="submitRegistration()">&#10003; Tuma Ombi</button>
+      <button onclick="regGoBack(2)" style="background:none;border:none;color:#64748b;font-size:12px;cursor:pointer;width:100%;text-align:center;margin-top:8px">&#8592; Rudi nyuma</button>
+    </div>
+
+    <!-- Step 4: Success -->
+    <div id="reg-step-success" style="display:none;text-align:center;padding:16px 0">
+      <div style="font-size:52px;margin-bottom:12px">&#9989;</div>
+      <div style="font-size:18px;font-weight:800;color:#22c55e;margin-bottom:8px">Ombi Limetumwa!</div>
+      <div style="font-size:13px;color:#64748b;margin-bottom:20px;line-height:1.6">Admin atakipigia ombi lako.<br>Utaarifiwa ukikubaliwa.</div>
+      <button class="btn btn-full" onclick="showLogin()">Rudi Login</button>
+    </div>
+
+    <div class="login-err" id="reg-err" style="margin-top:10px"></div>
+  </div>
+</div>
+
+<!-- ══ PENDING APPROVAL MODAL ══ -->
+<div class="detail-overlay" id="pending-modal" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="detail-modal" style="max-width:440px">
+    <div class="detail-modal-header">
+      <span style="font-weight:700;font-size:15px;color:#f59e0b">&#128276; Maombi ya Kujiandikisha</span>
+      <button class="detail-close" onclick="G('pending-modal').classList.remove('open')">&#10005;</button>
+    </div>
+    <div style="padding:16px" id="pending-list">
+      <p class="empty">Hakuna maombi.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ══ APP ══ -->
+<div id="screen-app" style="display:none">
+  <div class="header">
+    <div class="header-left">
+      <h1 style="letter-spacing:1px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" style="width:22px;height:22px;vertical-align:middle;margin-right:6px;filter:drop-shadow(0 0 6px #6366f1)"><defs><linearGradient id="hbg" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#0d0d1a"/><stop offset="100%" style="stop-color:#1a1a2e"/></linearGradient><linearGradient id="hg" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#818cf8"/><stop offset="100%" style="stop-color:#4f46e5"/></linearGradient></defs><rect width="100" height="100" rx="24" fill="url(#hbg)"/><text x="50" y="68" text-anchor="middle" font-family="Arial Black,Impact,sans-serif" font-size="62" font-weight="900" fill="url(#hg)">G</text></svg>GALACTOS</h1>
+      <p id="header-sub">...</p>
+    </div>
+    <div class="header-right">
+      <span id="sync-indicator" title="Hali ya mtandao"><span class="sync-dot" id="sync-dot"></span><span id="sync-txt" style="font-size:11px;color:#64748b">Live</span></span>
+      <button id="install-btn" onclick="installApp()">&#128242; Weka</button>
+      <button class="header-icon-btn" onclick="openSearchModal()" title="Tafuta" aria-label="Tafuta wanafunzi na walimu">&#128269;</button>
+      <div class="notif-wrap admin-only-inline" id="notif-wrap" style="display:none">
+        <button class="header-icon-btn" onclick="openPendingModal()" title="Maombi ya kujiandikisha" aria-label="Maombi">&#128276;</button>
+        <div class="notif-count" id="notif-count" style="display:none">0</div>
+      </div>
+      <button class="header-icon-btn profile-btn" onclick="openProfile()" title="Wasifu wangu" id="profile-avatar-btn" aria-label="Wasifu wangu">?</button>
+      <button class="logout-btn" onclick="doLogout()">Toka</button>
+    </div>
+  </div>
+
+  <!-- ADMIN TABS -->
+  <div id="admin-tabs" class="tabs" style="display:none">
+    <button class="tab-btn active" onclick="showTab('overview',this)">Muhtasari</button>
+    <button class="tab-btn" onclick="showTab('a-enter',this)">Ingiza</button>
+    <button class="tab-btn" onclick="showTab('a-students',this)">Wanafunzi</button>
+    <button class="tab-btn" onclick="showTab('a-analysis',this)">Uchambuzi</button>
+    <button class="tab-btn" onclick="showTab('teachers',this)">Walimu</button>
+    <button class="tab-btn" onclick="showTab('report',this)">Ripoti</button>
+    <button class="tab-btn" onclick="showTab('settings',this)">Mipangilio</button>
+  </div>
+
+  <!-- TEACHER TABS -->
+  <div id="teacher-tabs" class="tabs" style="display:none">
+    <button class="tab-btn active" onclick="showTab('t-enter',this)">Ingiza</button>
+    <button class="tab-btn" onclick="showTab('t-analysis',this)">Uchambuzi</button>
+    <button class="tab-btn" onclick="showTab('t-students',this)">Wanafunzi</button>
+  </div>
+
+  <!-- HEADMASTER TABS -->
+  <div id="hm-tabs" class="tabs" style="display:none">
+    <button id="hm-tab-overview" class="tab-btn active" onclick="showTab('hm-overview',this)">Muhtasari</button>
+    <button id="hm-tab-classes" class="tab-btn" onclick="showTab('hm-classes',this)">Madarasa</button>
+    <button id="hm-tab-report" class="tab-btn" onclick="showTab('hm-report',this)">Ripoti</button>
+    <button id="hm-tab-students" class="tab-btn" onclick="showTab('hm-students',this)">Wanafunzi</button>
+    <button id="hm-tab-teachers" class="tab-btn" onclick="showTab('hm-teachers',this)">Walimu</button>
+    <button id="hm-tab-enter" class="tab-btn" onclick="showTab('hm-enter',this)">Ingiza</button>
+  </div>
+
+  <!-- ADMIN PAGES -->
+  <div id="page-overview" class="page active">
+  <div style="padding:16px 16px 0">
+    <div class="search-wrap">
+      <span class="search-icon">&#128269;</span>
+      <input type="text" class="search-input" id="student-search" placeholder="Tafuta mwanafunzi..." oninput="searchStudent(this.value)">
+    </div>
+    <div class="search-results" id="search-results"></div>
+  </div>
+  <div id="overview-content"></div>
+</div>
+
+  <div id="page-a-enter" class="page">
+    <div class="card">
+      <label>Chagua Darasa</label>
+      <select id="a-class-select" onchange="renderAdminScores()"></select>
+    </div>
+    <div class="card">
+      <label>Chagua Somo</label>
+      <select id="a-subject-select" onchange="renderAdminScores()"></select>
+    </div>
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <span class="card-title" style="margin:0">Alama /100</span>
+        <span id="a-passmark-label" style="font-size:12px;color:#64748b"></span>
+      </div>
+      <div id="a-score-list"><p class="empty">Chagua darasa na somo.</p></div>
+      <button class="btn btn-full" onclick="toast('&#10003; Imehifadhiwa! (auto-save)','green')">&#128190; Hifadhi</button>
+    </div>
+  </div>
+
+  <div id="page-a-students" class="page">
+    <div class="card">
+      <label>Chagua Darasa</label>
+      <select id="a-class-select2" onchange="renderAdminStudents()"></select>
+    </div>
+    <div class="card">
+      <div class="card-title">Ongeza Mwanafunzi</div>
+      <div style="display:flex;gap:8px">
+        <input type="text" id="a-new-student" placeholder="Jina la mwanafunzi..." style="flex:1" onkeydown="if(event.key==='Enter')addAdminStudent()">
+        <button class="btn" onclick="addAdminStudent()">Ongeza</button>
+      </div>
+      <div id="a-student-list" style="margin-top:12px"></div>
+    </div>
+  </div>
+
+  <div id="page-a-analysis" class="page">
+    <div class="card">
+      <label>Chagua Darasa</label>
+      <select id="a-analysis-class" onchange="renderAdminAnalysis()"></select>
+    </div>
+    <div class="export-bar">
+      <button class="btn-export btn-pdf" onclick="exportAdminClassPDF()">&#128424; PDF</button>
+      <button class="btn-export btn-rtf" onclick="exportAdminClassRTF()">&#128196; Word</button>
+      <button class="btn-export" style="background:#15803d;color:#fff" onclick="exportExcel('admin')">&#128202; Excel</button>
+    </div>
+    <!-- Excel Import for Admin -->
+    <div class="card" style="border-color:#15803d;margin-bottom:12px">
+      <div class="card-title" style="color:#22c55e">&#128196; Pakia Excel (Import)</div>
+      <p style="font-size:12px;color:#64748b;margin-bottom:10px">Pakia Excel yenye matokeo. Safu ya kwanza: Jina, kisha alama za masomo.</p>
+      <input type="file" id="a-excel-file" accept=".xlsx,.xls,.csv" style="display:none" onchange="importExcel(this,'admin')">
+      <button class="btn" style="background:#15803d;width:100%" onclick="G('a-excel-file').click()">&#128196; Chagua File ya Excel</button>
+      <div id="a-excel-preview" style="display:none;margin-top:8px">
+        <div style="font-size:12px;color:#22c55e;margin-bottom:8px" id="a-excel-info"></div>
+        <button class="btn btn-full" style="background:#15803d" onclick="confirmExcelImport('admin')">&#10003; Thibitisha Import</button>
+        <button class="btn btn-full" style="background:#1e293b;margin-top:6px" onclick="cancelExcelImport('admin')">Ghairi</button>
+      </div>
+    </div>
+    <div id="a-analysis-content"></div>
+  </div>
+
+  <div id="page-teachers" class="page">
+    <!-- Pending approvals section — shown when there are requests -->
+    <div id="pending-section" style="display:none">
+      <div class="card" style="border-color:#f59e0b60">
+        <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+          <div style="font-size:11px;color:#f59e0b;font-weight:700;text-transform:uppercase;letter-spacing:.06em">&#128276; Maombi Mapya</div>
+          <span id="pending-count-badge" class="pending-badge">0</span>
+        </div>
+        <div id="pending-inline-list"></div>
+      </div>
+    </div>
+    <!-- Teacher Activity section -->
+    <div class="card" style="margin-bottom:14px">
+      <div style="font-size:11px;color:#64748b;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px">&#128202; Shughuli za Walimu</div>
+      <div id="teacher-activity-list"><p class="empty">Hakuna walimu bado.</p></div>
+    </div>
+    <div class="card" style="border-color:#f59e0b40">
+      <div class="card-title" style="color:#f59e0b">&#127891; Ongeza Mkuu wa Shule</div>
+      <input type="text" id="new-hm-name" placeholder="Jina la mkuu..." style="margin-bottom:8px">
+      <input type="text" id="new-hm-user" placeholder="Username..." style="margin-bottom:8px">
+      <input type="password" id="new-hm-pass" placeholder="Nywila..." style="margin-bottom:10px">
+      <div class="card-title" style="margin-bottom:8px">Ruhusa</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:12px">
+        <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:#e2e8f0">
+          <input type="checkbox" id="perm-view-all" checked> Ona Madarasa Yote
+        </label>
+        <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:#e2e8f0">
+          <input type="checkbox" id="perm-report" checked> Ripoti
+        </label>
+        <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:#e2e8f0">
+          <input type="checkbox" id="perm-add-students"> Ongeza Wanafunzi
+        </label>
+        <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:#e2e8f0">
+          <input type="checkbox" id="perm-add-teachers"> Ongeza Walimu
+        </label>
+        <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:#e2e8f0">
+          <input type="checkbox" id="perm-export" checked> Export
+        </label>
+        <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:#e2e8f0">
+          <input type="checkbox" id="perm-enter-results"> Ingiza Matokeo
+        </label>
+      </div>
+      <button class="btn btn-full" style="background:#d97706" onclick="addHeadmaster()">Ongeza Mkuu</button>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Ongeza Mwalimu</div>
+      <input type="text" id="new-teacher-name" placeholder="Jina la mwalimu..." style="margin-bottom:8px">
+      <input type="text" id="new-teacher-user" placeholder="Username..." style="margin-bottom:8px">
+      <input type="password" id="new-teacher-pass" placeholder="Nywila..." style="margin-bottom:8px">
+      <label style="margin-bottom:6px">Darasa</label>
+      <select id="new-teacher-class" style="margin-bottom:8px"></select>
+      <label style="margin-bottom:6px">Somo (la kufundisha) *</label>
+      <input type="text" id="new-teacher-subject-text" placeholder="Andika somo... (mfano: Hisabati)" style="margin-bottom:4px">
+      <div id="subject-suggestions" style="margin-bottom:12px"></div>
+      <button class="btn btn-full" onclick="addTeacher()">Ongeza Mwalimu</button>
+    </div>
+    <div class="card"><div class="card-title">Walimu Wote</div><div id="teachers-list"></div></div>
+  </div>
+
+  <div id="page-report" class="page"><div id="report-content"></div></div>
+
+  <div id="page-settings" class="page">
+    <div class="card">
+      <div class="card-title">Badilisha Nywila ya Admin</div>
+      <input type="password" id="new-admin-pass" placeholder="Nywila mpya..." style="margin-bottom:8px">
+      <input type="password" id="confirm-admin-pass" placeholder="Thibitisha nywila...">
+      <button class="btn btn-full" onclick="changeAdminPass()">Hifadhi Nywila</button>
+    </div>
+    <div class="card">
+      <div class="card-title">Masomo</div>
+      <div id="subjects-list" style="margin-bottom:12px"></div>
+      <input type="text" id="new-subject-name" placeholder="Jina la somo..." style="margin-bottom:8px">
+      <div class="passmark-row">
+        <label>Kufaulu:</label>
+        <input type="number" id="new-subject-pass" value="41" min="0" max="100">
+        <button class="btn" onclick="addSubject()">Ongeza</button>
+      </div>
+    </div>
+    <div class="card" style="border-color:#7f1d1d">
+      <div class="card-title" style="color:#ef4444">Hatari</div>
+      <p style="font-size:13px;color:#94a3b8;margin-bottom:12px">Itafuta wanafunzi na matokeo yote. Walimu na masomo hayatafutwa.</p>
+      <button class="btn btn-danger btn-full" onclick="clearStudentData()">&#128465; Futa Wanafunzi na Matokeo</button>
+    </div>
+  </div>
+
+  <div id="page-class-detail" class="page"><div id="class-detail-content"></div></div>
+
+  <!-- TEACHER PAGES -->
+  <div id="page-t-enter" class="page" style="display:none">
+    <!-- Excel Import -->
+    <div class="card" style="border-color:#15803d">
+      <div class="card-title" style="color:#22c55e">&#128196; Pakia Excel (Import)</div>
+      <p style="font-size:12px;color:#64748b;margin-bottom:10px">Pakia file ya Excel yenye majina ya wanafunzi na alama. Safu ya kwanza: Jina, kisha alama za masomo.</p>
+      <input type="file" id="t-excel-file" accept=".xlsx,.xls,.csv" style="display:none" onchange="importExcel(this,'teacher')">
+      <button class="btn" style="background:#15803d;width:100%;margin-bottom:8px" onclick="G('t-excel-file').click()">&#128196; Chagua File ya Excel</button>
+      <div id="t-excel-preview" style="display:none">
+        <div style="font-size:12px;color:#22c55e;margin-bottom:8px" id="t-excel-info"></div>
+        <button class="btn btn-full" style="background:#15803d" onclick="confirmExcelImport('teacher')">&#10003; Thibitisha Import</button>
+        <button class="btn btn-full" style="background:#1e293b;margin-top:6px" onclick="cancelExcelImport('teacher')">Ghairi</button>
+      </div>
+    </div>
+    <div class="card">
+      <label>Chagua Somo</label>
+      <select id="t-subject-select" onchange="renderTeacherScores()"></select>
+    </div>
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <span class="card-title" style="margin:0">Alama /100</span>
+        <span id="t-passmark-label" style="font-size:12px;color:#64748b"></span>
+      </div>
+      <div id="t-score-list"><p class="empty">Ongeza wanafunzi kwenye Wanafunzi.</p></div>
+      <button class="btn btn-full" onclick="toast('&#10003; Imehifadhiwa! (auto-save)','green')">&#128190; Hifadhi</button>
+    </div>
+  </div>
+
+  <div id="page-t-analysis" class="page" style="display:none">
+    <div class="export-bar">
+      <button class="btn-export btn-pdf" onclick="exportPDF()">&#128424; PDF</button>
+      <button class="btn-export btn-rtf" onclick="exportRTF()">&#128196; Word</button>
+      <button class="btn-export" style="background:#15803d;color:#fff" onclick="exportExcel('teacher')">&#128202; Excel</button>
+    </div>
+      <div style="margin-bottom:12px">
+    <div class="search-wrap">
+      <span class="search-icon">&#128269;</span>
+      <input type="text" class="search-input" id="t-student-search" placeholder="Tafuta mwanafunzi..." oninput="searchStudent(this.value,'teacher')">
+    </div>
+    <div class="search-results" id="t-search-results"></div>
+  </div>
+  <div id="t-analysis-content"></div>
+  </div>
+
+  <div id="page-t-students" class="page" style="display:none">
+    <div class="card">
+      <div class="card-title">Ongeza Mwanafunzi</div>
+      <div style="display:flex;gap:8px">
+        <input type="text" id="new-student-name" placeholder="Jina la mwanafunzi..." style="flex:1" onkeydown="if(event.key==='Enter')addStudent()">
+        <button class="btn" onclick="addStudent()">Ongeza</button>
+      </div>
+      <div id="t-student-list" style="margin-top:12px"></div>
+    </div>
+  </div>
+</div>
+
+
+  <!-- ══ HEADMASTER PAGES ══ -->
+  <div id="page-hm-overview" class="page" style="display:none">
+    <div id="hm-overview-content"></div>
+  </div>
+
+  <div id="page-hm-classes" class="page" style="display:none">
+    <div id="hm-classes-content"></div>
+  </div>
+
+  <div id="page-hm-report" class="page" style="display:none">
+    <div id="hm-export-bar" class="export-bar" style="display:flex">
+      <button class="btn-export btn-pdf" onclick="exportAdminPDF()">&#128424; Chapisha</button>
+      <button class="btn-export btn-rtf" onclick="exportAdminRTF()">&#128196; Pakua Word</button>
+    </div>
+    <div id="hm-report-content"></div>
+  </div>
+
+  <div id="page-hm-students" class="page" style="display:none">
+    <div class="card">
+      <label>Chagua Darasa</label>
+      <select id="hm-class-select" onchange="renderHMStudents()"></select>
+    </div>
+    <div class="card">
+      <div class="card-title">Ongeza Mwanafunzi</div>
+      <div style="display:flex;gap:8px">
+        <input type="text" id="hm-new-student" placeholder="Jina la mwanafunzi..." style="flex:1" onkeydown="if(event.key==='Enter')addHMStudent()">
+        <button class="btn" onclick="addHMStudent()">Ongeza</button>
+      </div>
+      <div id="hm-student-list" style="margin-top:12px"></div>
+    </div>
+  </div>
+
+  <div id="page-hm-teachers" class="page" style="display:none">
+    <div class="card">
+      <div class="card-title">Ongeza Mwalimu</div>
+      <input type="text" id="hm-new-teacher-name" placeholder="Jina la mwalimu..." style="margin-bottom:8px">
+      <input type="text" id="hm-new-teacher-user" placeholder="Username..." style="margin-bottom:8px">
+      <input type="password" id="hm-new-teacher-pass" placeholder="Nywila..." style="margin-bottom:8px">
+      <label style="margin-bottom:6px">Darasa</label>
+      <select id="hm-new-teacher-class" style="margin-bottom:8px"></select>
+      <input type="text" id="hm-new-teacher-subject" placeholder="Somo (mfano: Hisabati)..." style="margin-bottom:12px">
+      <button class="btn btn-full" onclick="addHMTeacher()">Ongeza Mwalimu</button>
+    </div>
+    <div class="card">
+      <div class="card-title">Walimu Wote</div>
+      <div id="hm-teachers-list"></div>
+    </div>
+  </div>
+
+  <div id="page-hm-enter" class="page" style="display:none">
+    <div class="card">
+      <label>Chagua Darasa</label>
+      <select id="hm-enter-class" onchange="renderHMScores()"></select>
+    </div>
+    <div class="card">
+      <label>Chagua Somo</label>
+      <select id="hm-enter-subject" onchange="renderHMScores()"></select>
+    </div>
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <span class="card-title" style="margin:0">Alama /100</span>
+        <span id="hm-passmark-label" style="font-size:12px;color:#64748b"></span>
+      </div>
+      <div id="hm-score-list"><p class="empty">Chagua darasa na somo.</p></div>
+      <button class="btn btn-full" onclick="toast('&#10003; Imehifadhiwa! (auto-save)','green')">&#128190; Hifadhi</button>
+    </div>
+  </div>
+
+
+<!-- ══ STUDENT DETAIL MODAL ══ -->
+<div class="detail-overlay" id="student-detail-modal" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="detail-modal">
+    <div class="detail-modal-header">
+      <span style="font-weight:700;font-size:15px;color:#a5b4fc">&#128100; Taarifa ya Mwanafunzi</span>
+      <button class="detail-close" onclick="G('student-detail-modal').classList.remove('open')">&#10005;</button>
+    </div>
+    <div style="padding:16px" id="student-detail-content"></div>
+  </div>
+</div>
+
+<!-- ══ EDIT TEACHER MODAL ══ -->
+<div class="edit-overlay" id="edit-modal" onclick="if(event.target===this)G('edit-modal').style.display='none'">
+  <div class="edit-modal-box">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <span style="font-weight:700;font-size:15px;color:#a5b4fc">&#9998; Hariri Mwalimu</span>
+      <button class="detail-close" onclick="G('edit-modal').style.display='none'">&#10005;</button>
+    </div>
+    <input type="hidden" id="edit-tid">
+    <label>Jina</label>
+    <input type="text" id="edit-tname" placeholder="Jina la mwalimu..." style="margin-bottom:10px">
+    <label>Username</label>
+    <input type="text" id="edit-tuser" placeholder="Username..." style="margin-bottom:10px">
+    <label>Nywila Mpya (acha wazi kubaki sawa)</label>
+    <input type="password" id="edit-tpass" placeholder="Nywila mpya..." style="margin-bottom:10px" autocomplete="new-password">
+    <label>Darasa</label>
+    <select id="edit-tclass" style="margin-bottom:10px"></select>
+    <label>Somo</label>
+    <input type="text" id="edit-tsubject" placeholder="Jina la somo..." style="margin-bottom:6px">
+    <div id="edit-tsug" style="margin-bottom:14px"></div>
+    <button class="btn btn-full" onclick="saveEditTeacher()">&#10003; Hifadhi Mabadiliko</button>
+  </div>
+</div>
+
+<!-- ══ USER PROFILE MODAL ══ -->
+<div class="detail-overlay" id="profile-modal" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="detail-modal" style="max-width:360px">
+    <div class="detail-modal-header">
+      <span style="font-weight:700;font-size:15px;color:#a5b4fc">&#128100; Wasifu Wangu</span>
+      <button class="detail-close" onclick="G('profile-modal').classList.remove('open')">&#10005;</button>
+    </div>
+    <div style="padding:16px" id="profile-content"></div>
+  </div>
+</div>
+
+
+<!-- ══ TEACHER DETAIL MODAL ══ -->
+<div class="detail-overlay" id="teacher-detail-modal" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="detail-modal" style="max-width:460px;padding:0">
+    <div class="td-modal-body" id="teacher-detail-content"></div>
+  </div>
+</div>
+
+<!-- ══ SEARCH MODAL ══ -->
+<div class="detail-overlay" id="search-modal" onclick="if(event.target===this)closeSearchModal()">
+  <div class="detail-modal" style="max-width:480px">
+    <div class="detail-modal-header">
+      <span style="font-weight:700;font-size:15px;color:#a5b4fc">&#128269; Tafuta</span>
+      <button class="detail-close" onclick="closeSearchModal()">&#10005;</button>
+    </div>
+    <div style="padding:12px">
+      <div style="display:flex;gap:8px;margin-bottom:10px">
+        <div style="display:flex;gap:6px;background:#0a0f1e;border-radius:8px;padding:4px">
+          <button id="search-tab-students" class="search-tab-btn active" onclick="switchSearchTab('students')">&#128101; Wanafunzi</button>
+          <button id="search-tab-teachers" class="search-tab-btn" onclick="switchSearchTab('teachers')">&#127979; Walimu</button>
+        </div>
+      </div>
+      <input type="text" id="modal-search-input" class="search-input" placeholder="Andika kutafuta..." oninput="runModalSearch(this.value)" style="margin-bottom:10px;padding-left:12px">
+      <div id="modal-search-results" style="max-height:55vh;overflow-y:auto"></div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ══════════════════════════════════════
+// ██████╗ ███████╗███████╗
+// ██╔════╝██╔════╝╚══███╔╝
+// ██║  ███╗█████╗    ███╔╝
+// ██║   ██║██╔══╝   ███╔╝
+// ╚██████╔╝███████╗███████╗
+//  ╚═════╝ ╚══════╝╚══════╝
+// GALACTOS — FIREBASE EDITION
+// ══════════════════════════════════════
+
+// ── BADILISHA HII NA CONFIG YAKO YA FIREBASE ──
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyAc7SBF8CqBH0xgI1H1QQcRjEkM6Topfbc",
+  authDomain: "galactos-html.firebaseapp.com",
+  projectId: "galactos-html",
+  storageBucket: "galactos-html.firebasestorage.app",
+  messagingSenderId: "598731363864",
+  appId: "1:598731363864:web:d9da1927c4e589bfc5d56d",
+  measurementId: "G-8DHSEP1XQM"
+};
+
+// ── GRADES ──
+const GRADES=[
+  {label:"A",min:41,color:"#22c55e"},
+  {label:"B",min:31,color:"#3b82f6"},
+  {label:"C",min:21,color:"#f59e0b"},
+  {label:"D",min:11,color:"#f97316"},
+  {label:"E",min:0, color:"#ef4444"}
+];
+function getGrade(s){return GRADES.find(g=>Number(s)>=g.min)||GRADES[GRADES.length-1]}
+
+// ── DEFAULT DATA ──
+const DEF_CLASSES=[
+  {id:"c1",name:"Darasa 1"},{id:"c2",name:"Darasa 2"},{id:"c3",name:"Darasa 3"},
+  {id:"c4",name:"Darasa 4"},{id:"c5",name:"Darasa 5"},{id:"c6",name:"Darasa 6"},{id:"c7",name:"Darasa 7"}
+];
+const DEF_SUBJECTS=[
+  {id:"s1",name:"Hisabati",passmark:41},
+  {id:"s2",name:"Jiografia",passmark:41},
+  {id:"s3",name:"Sanaa na Michezo",passmark:41}
+];
+
+// ── STATE ──
+let CU = null; // current user
+let db = null; // firestore instance
+let unsubListeners = []; // realtime listeners to clean up
+
+// Local cache for offline/fast rendering
+let cache = {
+  users: [], students: [], results: {}, subjects: DEF_SUBJECTS, classes: DEF_CLASSES, pendingUsers: []
+};
+
+// ── FIREBASE INIT ──
+let fbReady = false;
+try {
+  firebase.initializeApp(FIREBASE_CONFIG);
+  db = firebase.firestore();
+  db.enablePersistence({synchronizeTabs:true}).catch(()=>{});
+  fbReady = true;
+  console.log("Firebase connected");
+} catch(e) {
+  console.warn("Firebase failed, using localStorage fallback:", e);
+}
+
+// ── OFFLINE DETECTION ──
+function updateOnlineStatus(){
+  const online = navigator.onLine;
+  const dot = G("sync-dot"), txt = G("sync-txt");
+  if(dot){dot.className="sync-dot"+(online?"":" off")}
+  if(txt){txt.textContent=online?"Live":"Offline"}
+}
+window.addEventListener("online",  updateOnlineStatus);
+window.addEventListener("offline", updateOnlineStatus);
+updateOnlineStatus();
+
+// ── HELPERS ──
+function G(id){return document.getElementById(id)}
+function esc(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;")}
+function escId(s){return String(s).replace(/[^a-zA-Z0-9_-]/g,"_")}
+function rkey(sid,subId){return escId(sid)+"__"+escId(subId)}
+function getScore(sid,subId){return cache.results[rkey(sid,subId)]??""}
+function hashPass(p){let h=0;for(let i=0;i<p.length;i++){h=Math.imul(31,h)+p.charCodeAt(i)|0}return"h"+Math.abs(h).toString(36)}
+
+// ── TOAST ──
+function toast(msg,type){
+  const e=G("toast");
+  e.textContent=msg;
+  e.style.borderColor=type==="green"?"#22c55e":type==="red"?"#ef4444":"#6366f1";
+  e.style.color=type==="green"?"#86efac":type==="red"?"#fca5a5":"#a5b4fc";
+  e.classList.add("show");
+  setTimeout(()=>e.classList.remove("show"),2200);
+}
+
+// ══ SESSION TIMEOUT (15 min inactivity) ══
+let _timeout;
+function resetTimeout(){
+  clearTimeout(_timeout);
+  if(CU) _timeout=setTimeout(()=>{
+    toast("Umefunguliwa kwa sababu ya kutotumia","red");
+    setTimeout(doLogout,1500);
+  },15*60*1000);
+}
+["click","touchstart","keydown"].forEach(ev=>document.addEventListener(ev,resetTimeout));
+
+// ══ FIRESTORE HELPERS ══
+async function fsGet(col){
+  if(!fbReady) return [];
+  const snap = await db.collection(col).get();
+  return snap.docs.map(d=>({...d.data(), _id:d.id}));
+}
+async function fsSet(col,id,data){
+  if(!fbReady) return;
+  await db.collection(col).doc(id).set(data, {merge:true});
+}
+async function fsDel(col,id){
+  if(!fbReady) return;
+  await db.collection(col).doc(id).delete();
+}
+function fsListen(col,cb){
+  if(!fbReady) return ()=>{};
+  return db.collection(col).onSnapshot(snap=>{
+    const data = snap.docs.map(d=>({...d.data(),_id:d.id}));
+    cb(data);
+  });
+}
+
+// ══ LOAD & SYNC ══
+// Helper: show loading message
+function setLoadingText(msg){ const el=G("loading-text"); if(el) el.textContent=msg; }
+
+// Helper: hide loading overlay
+function hideLoading(){
+  const el=G("app-loading");
+  if(!el) return;
+  el.classList.add("fade");
+  setTimeout(()=>{el.style.display="none";},450);
+}
+
+// Firebase with timeout — never block login for more than 6 seconds
+function fbGetWithTimeout(ref, ms=6000){
+  return Promise.race([
+    ref.get(),
+    new Promise((_,rej)=>setTimeout(()=>rej(new Error("timeout")),ms))
+  ]);
+}
+
+async function initData(){
+  setLoadingText("Inaanzisha Galaxy Core...");
+
+  // ── Always ensure localStorage has a working admin ──
+  ensureLocalAdmin();
+
+  if(fbReady){
+    try{
+      setLoadingText("Inaungana na hifadhidata...");
+
+      // Load config (classes + subjects)
+      const cfgSnap = await fbGetWithTimeout(db.collection("gx_config").doc("main"));
+      if(cfgSnap.exists){
+        const cfg = cfgSnap.data();
+        if(cfg.subjects && cfg.subjects.length) cache.subjects = cfg.subjects;
+        if(cfg.classes  && cfg.classes.length)  cache.classes  = cfg.classes;
+      } else {
+        await db.collection("gx_config").doc("main").set({subjects:DEF_SUBJECTS,classes:DEF_CLASSES});
+      }
+
+      setLoadingText("Inapakia watumiaji...");
+
+      // Check if admin exists — seed if empty
+      const usersSnap = await fbGetWithTimeout(db.collection("gx_users"));
+      if(usersSnap.empty){
+        await seedInitialData();
+        const freshSnap = await db.collection("gx_users").get();
+        cache.users = freshSnap.docs.map(d=>({...d.data(),_id:d.id}));
+      } else {
+        cache.users = usersSnap.docs.map(d=>({...d.data(),_id:d.id}));
+      }
+
+      // Merge localStorage admin into cache in case Firebase doesn't have it
+      ensureLocalAdmin();
+
+    } catch(e){
+      console.warn("Firebase timeout/error — using localStorage fallback:", e.message);
+      loadLocalCache();
+    }
+  } else {
+    setLoadingText("Inatumia hifadhi ya ndani...");
+    loadLocalCache();
+  }
+
+  setLoadingText("Tayari!");
+  hideLoading();
+}
+
+// Guarantee a working admin always exists in localStorage
+function ensureLocalAdmin(){
+  try{
+    let raw = localStorage.getItem("gx_cache");
+    let data = raw ? JSON.parse(raw) : {};
+    if(!data.users) data.users = [];
+    // Check if admin (zarem) already in cache
+    const hasAdmin = data.users.find(u=>u.role==="admin");
+    if(!hasAdmin){
+      data.users.push({
+        _id:"admin",
+        username:"zarem",
+        password:hashPass("admin123"),
+        role:"admin",
+        name:"Zarem"
+      });
+      localStorage.setItem("gx_cache", JSON.stringify(data));
+    }
+    // Merge into live cache
+    Object.assign(cache, data);
+    // Always keep defaults if none loaded
+    if(!cache.subjects||!cache.subjects.length) cache.subjects = DEF_SUBJECTS;
+    if(!cache.classes ||!cache.classes.length)  cache.classes  = DEF_CLASSES;
+  } catch(e){ console.warn("ensureLocalAdmin error:", e); }
+}
+
+async function seedInitialData(){
+  const adminPass = hashPass("admin123");
+  await db.collection("gx_users").doc("admin").set({
+    username:"zarem", password:adminPass, role:"admin", name:"Zarem", _id:"admin"
+  });
+  await db.collection("gx_config").doc("main").set({
+    subjects: DEF_SUBJECTS, classes: DEF_CLASSES
+  });
+  toast("Mfumo umeanzishwa!");
+}
+
+function startRealtimeSync(){
+  // Clean old listeners
+  unsubListeners.forEach(u=>u());
+  unsubListeners=[];
+
+  if(!fbReady) return;
+
+  // Listen students
+  unsubListeners.push(fsListen("gx_students", data=>{
+    cache.students = data;
+    refreshCurrentPage();
+  }));
+  // Listen results
+  unsubListeners.push(fsListen("gx_results", data=>{
+    cache.results = {};
+    data.forEach(r=>{ cache.results[r.key]=r.score; });
+    refreshCurrentPage();
+  }));
+  // Listen config
+  unsubListeners.push(db.collection("gx_config").doc("main").onSnapshot(doc=>{
+    if(doc.exists){
+      const cfg=doc.data();
+      if(cfg.subjects) cache.subjects=cfg.subjects;
+      if(cfg.classes)  cache.classes=cfg.classes;
+      refreshCurrentPage();
+    }
+  }));
+  // Listen users (for teacher management)
+  if(CU&&CU.role==="admin"){
+    unsubListeners.push(fsListen("gx_users", data=>{
+      cache.users=data;
+      const tl=G("teachers-list");
+      if(tl&&G("page-teachers").classList.contains("active"))renderTeachers();
+    }));
+  }
+}
+
+function refreshCurrentPage(){
+  if(!CU) return;
+  const active=document.querySelector(".page.active");
+  if(!active) return;
+  const id=active.id;
+  if(id==="page-overview") renderOverview();
+  else if(id==="page-a-enter") renderAdminScores();
+  else if(id==="page-a-students") renderAdminStudents();
+  else if(id==="page-a-analysis") renderAdminAnalysis();
+  else if(id==="page-t-enter") renderTeacherScores();
+  else if(id==="page-t-analysis") renderTeacherAnalysis();
+  else if(id==="page-t-students") renderTeacherStudents();
+  else if(id==="page-report") renderReport();
+}
+
+// ── LOCAL FALLBACK ──
+function loadLocalCache(){
+  try{
+    const r=localStorage.getItem("gx_cache");
+    if(r){const d=JSON.parse(r);Object.assign(cache,d);}
+    else{
+      cache.users=[{_id:"admin",username:"zarem",password:hashPass("admin123"),role:"admin",name:"Zarem"}];
+      saveLocalCache();
+    }
+  }catch(e){}
+}
+function saveLocalCache(){
+  try{localStorage.setItem("gx_cache",JSON.stringify(cache));}catch(e){}
+}
+
+// ══ LOGIN ══
+async function doLogin(){
+  const u = G("login-user").value.trim().toLowerCase();
+  const p = G("login-pass").value;
+
+  if(!u){ showLoginErr("Weka jina la mtumiaji"); return; }
+  if(!p){ showLoginErr("Weka nywila"); return; }
+
+  const hp = hashPass(p);
+  const btn = document.querySelector(".login-btn");
+  const origText = btn ? btn.innerHTML : "";
+  if(btn){ btn.innerHTML="&#9679;&#9679;&#9679;"; btn.disabled=true; }
+  hideLoginErr();
+
+  let user = null;
+  try{
+    if(fbReady){
+      try{
+        const snap = await fbGetWithTimeout(
+          db.collection("gx_users").where("username","==",u).limit(1), 5000
+        );
+        if(!snap.empty){
+          const d = snap.docs[0].data();
+          if(d.password===hp || d.password===p){
+            user = {...d, _id:snap.docs[0].id};
+            if(d.password===p)
+              db.collection("gx_users").doc(snap.docs[0].id).update({password:hp}).catch(()=>{});
+          }
+        }
+      } catch(e){
+        console.warn("Firebase login failed, trying localStorage:", e.message);
+      }
+    }
+    // Always also check localStorage (covers offline + file:// mode)
+    if(!user){
+      // Make sure local cache is fresh
+      ensureLocalAdmin();
+      user = cache.users.find(x=>
+        x.username && x.username.toLowerCase()===u &&
+        (x.password===hp || x.password===p)
+      );
+    }
+  } catch(e){
+    console.error("Login error:", e);
+  } finally {
+    if(btn){ btn.innerHTML=origText; btn.disabled=false; }
+  }
+
+  if(!user){ showLoginErr("Jina la mtumiaji au nywila si sahihi"); return; }
+  hideLoginErr();
+  CU=user;
+  resetTimeout();
+  // Track last login time and count
+  const loginUpdate={lastLogin:new Date().toISOString(),loginCount:(user.loginCount||0)+1};
+  const uid=user._id||user.id;
+  if(uid&&uid!=="admin"){
+    const idx=cache.users.findIndex(u=>(u._id||u.id)===uid);
+    if(idx>-1){cache.users[idx].lastLogin=loginUpdate.lastLogin;cache.users[idx].loginCount=loginUpdate.loginCount;}
+    if(fbReady) fsSet("gx_users",uid,loginUpdate).catch(()=>{});
+    else saveLocalCache();
+  }
+
+  G("screen-login").style.display="none";
+  G("screen-app").style.display="block";
+
+  // Load students & results
+  if(fbReady){
+    const [studsSnap,resSnap]=await Promise.all([
+      db.collection("gx_students").get(),
+      db.collection("gx_results").get()
+    ]);
+    cache.students=studsSnap.docs.map(d=>({...d.data(),_id:d.id}));
+    cache.results={};
+    resSnap.docs.forEach(d=>{const r=d.data();cache.results[r.key]=r.score;});
+    startRealtimeSync();
+  }
+
+  updateProfileBtn();
+  if(user.role==="admin"){
+    G("admin-tabs").style.display="flex";
+    // Show notification bell for admin
+    const nw=G("notif-wrap"); if(nw) nw.style.display="inline-flex";
+    // Load pending registrations
+    loadPendingUsers();
+    // Realtime listener for new pending users
+    if(fbReady){
+      unsubListeners.push(db.collection("gx_pending").where("status","==","pending").onSnapshot(snap=>{
+        cache.pendingUsers=snap.docs.map(d=>({...d.data(),_id:d.id}));
+        updatePendingBadge();
+        renderPendingList();
+      }));
+    }G("teacher-tabs").style.display="none";if(G("hm-tabs"))G("hm-tabs").style.display="none";
+    G("header-sub").textContent="Admin: "+user.name;
+    switchAdmin("overview",G("admin-tabs").querySelector(".tab-btn"));
+  } else if(user.role==="headmaster"){
+    if(G("hm-tabs"))G("hm-tabs").style.display="flex";G("admin-tabs").style.display="none";G("teacher-tabs").style.display="none";
+    G("header-sub").textContent="&#127891; Mkuu: "+user.name;
+    setupHMTabs();
+    const firstTab=Array.from(G("hm-tabs").querySelectorAll(".tab-btn")).find(b=>b.style.display!=="none");
+    const firstName=firstTab?firstTab.getAttribute("onclick").match(/"([^"]+)"/)[1]:"hm-overview";
+    switchHM(firstName,firstTab);
+  } else {
+    G("teacher-tabs").style.display="flex";G("admin-tabs").style.display="none";if(G("hm-tabs"))G("hm-tabs").style.display="none";
+    const cls=cache.classes.find(c=>c.id===user.classId);
+    const sub=user.subjectId?cache.subjects.find(s=>s.id===user.subjectId):null;
+    G("header-sub").textContent=(cls?cls.name:"Darasa")+(sub?" · "+sub.name:"")+" - "+user.name;
+    switchTeacher("t-enter",G("teacher-tabs").querySelector(".tab-btn"));
+  }
+}
+
+function showLoginErr(msg){
+  const e=G("login-err");
+  if(e){e.textContent=msg;e.style.display="block";}
+}
+function hideLoginErr(){
+  const e=G("login-err");
+  if(e){e.style.display="none";}
+}
+function doLogout(){
+  unsubListeners.forEach(u=>u());unsubListeners=[];
+  clearTimeout(_timeout);
+  CU=null;
+  G("screen-app").style.display="none";
+  G("screen-login").style.display="flex";
+  G("login-user").value="";G("login-pass").value="";
+}
+
+// ══ TAB ROUTING ══
+function showTab(name,btn){
+  if(CU&&CU.role==="admin")switchAdmin(name,btn);
+  else if(CU&&CU.role==="headmaster")switchHM(name,btn);
+  else switchTeacher(name,btn);
+}
+
+const ADMIN_PAGES=["overview","a-enter","a-students","a-analysis","teachers","report","settings","class-detail"];
+const TEACHER_PAGES=["t-enter","t-analysis","t-students"];
+
+function switchAdmin(name,btn){
+  document.querySelectorAll("#admin-tabs .tab-btn").forEach(b=>b.classList.remove("active"));
+  if(btn)btn.classList.add("active");
+  ADMIN_PAGES.forEach(p=>{const e=G("page-"+p);if(e)e.classList.remove("active")});
+  const pg=G("page-"+name);if(pg)pg.classList.add("active");
+  if(name==="overview")renderOverview();
+  else if(name==="a-enter")renderAdminEnter();
+  else if(name==="a-students")renderAdminStudentsTab();
+  else if(name==="a-analysis")renderAdminAnalysisTab();
+  else if(name==="teachers")renderTeachers();
+  else if(name==="report")renderReport();
+  else if(name==="settings")renderSettings();
+}
+
+function switchTeacher(name,btn){
+  document.querySelectorAll("#teacher-tabs .tab-btn").forEach(b=>b.classList.remove("active"));
+  if(btn)btn.classList.add("active");
+  TEACHER_PAGES.forEach(p=>{const e=G("page-"+p);if(e){e.classList.remove("active");e.style.display="none"}});
+  const pg=G("page-"+name);if(pg){pg.classList.add("active");pg.style.display="block"}
+  if(name==="t-enter")renderTeacherScores();
+  else if(name==="t-analysis")renderTeacherAnalysis();
+  else if(name==="t-students")renderTeacherStudents();
+}
+
+// ══ SCORE SAVE ══
+async function saveScore(studentId,subjectId,value){
+  const k=rkey(studentId,subjectId);
+  if(value===""||value===null){
+    delete cache.results[k];
+    if(fbReady) await fsDel("gx_results",k);
+  } else {
+    const score=Math.min(100,Math.max(0,Number(value)));
+    cache.results[k]=score;
+    if(fbReady) await fsSet("gx_results",k,{key:k,studentId,subjectId,score});
+    else saveLocalCache();
+  }
+}
+
+// ══ OVERVIEW ══
+function renderOverview(){
+  const tt=cache.users.filter(u=>u.role==="teacher").length;
+  let h="<div class='card'><div class='card-title'>Muhtasari wa Shule</div><div class='stat-grid'>";
+  h+="<div class='stat-box'><div class='stat-val'>"+cache.classes.length+"</div><div class='stat-lbl'>Madarasa</div></div>";
+  h+="<div class='stat-box'><div class='stat-val'>"+tt+"</div><div class='stat-lbl'>Walimu</div></div>";
+  h+="<div class='stat-box'><div class='stat-val'>"+cache.students.length+"</div><div class='stat-lbl'>Wanafunzi</div></div>";
+  let tr=0;cache.students.forEach(s=>cache.subjects.forEach(sub=>{if(getScore(s._id,sub.id)!=="")tr++}));
+  h+="<div class='stat-box'><div class='stat-val'>"+tr+"</div><div class='stat-lbl'>Matokeo</div></div>";
+  h+="</div></div><div class='class-grid'>";
+  cache.classes.forEach(cls=>{
+    const cs=cache.students.filter(s=>s.classId===cls.id);
+    const tc=cache.users.find(u=>u.role==="teacher"&&u.classId===cls.id);
+    let rc=0;cs.forEach(s=>cache.subjects.forEach(sub=>{if(getScore(s._id,sub.id)!=="")rc++}));
+    h+="<div class='class-card' onclick='drillClass(\""+esc(cls.id)+"\")'>";
+    h+="<h3>"+esc(cls.name)+"</h3><p>"+(tc?esc(tc.name):"Hana mwalimu")+"</p>";
+    h+="<div class='cc-stats'><div class='cc-stat'><div class='cc-stat-val'>"+cs.length+"</div><div class='cc-stat-lbl'>Wanafunzi</div></div>";
+    h+="<div class='cc-stat'><div class='cc-stat-val'>"+rc+"</div><div class='cc-stat-lbl'>Matokeo</div></div></div></div>";
+  });
+  h+="</div>";
+  G("overview-content").innerHTML=h;
+}
+
+// ══ DRILL CLASS ══
+function drillClass(cid){
+  const cls=cache.classes.find(c=>c.id===cid);if(!cls)return;
+  const cs=cache.students.filter(s=>s.classId===cid);
+  const tc=cache.users.find(u=>u.role==="teacher"&&u.classId===cid);
+  let h="<button class='back-btn' onclick='switchAdmin(\"overview\",null)'>&#8592; Rudi</button>";
+  h+="<div class='card'><div style='font-weight:700;font-size:18px;margin-bottom:4px'>"+esc(cls.name)+"</div>";
+  h+="<div style='font-size:13px;color:#64748b'>Mwalimu: "+(tc?esc(tc.name):"—")+"</div>";
+  h+="<div style='font-size:13px;color:#64748b;margin-top:2px'>Wanafunzi: "+cs.length+"</div></div>";
+  if(!cs.length){h+="<div class='card'><p class='empty'>Hakuna wanafunzi.</p></div>";}
+  else{cache.subjects.forEach(sub=>{
+    const ent=cs.map(s=>({name:s.name,score:getScore(s._id,sub.id)})).filter(x=>x.score!=="");
+    h+=ent.length?buildCard(sub,ent,cs.length):"<div class='card'><div style='font-weight:600;margin-bottom:4px'>"+esc(sub.name)+"</div><p style='color:#475569;font-size:13px'>Hakuna matokeo.</p></div>";
+  });}
+  G("class-detail-content").innerHTML=h;
+  ADMIN_PAGES.forEach(p=>{const e=G("page-"+p);if(e)e.classList.remove("active")});
+  G("page-class-detail").classList.add("active");
+  document.querySelectorAll("#admin-tabs .tab-btn").forEach(b=>b.classList.remove("active"));
+}
+
+// ══ ADMIN ENTER ══
+function renderAdminEnter(){
+  const cs=G("a-class-select"),ss=G("a-subject-select");
+  const curC=cs.value,curS=ss.value;
+  cs.innerHTML=cache.classes.map(c=>"<option value='"+esc(c.id)+"'>"+esc(c.name)+"</option>").join("");
+  ss.innerHTML=cache.subjects.map(s=>"<option value='"+esc(s.id)+"'>"+esc(s.name)+" (Kufaulu: "+s.passmark+")</option>").join("");
+  if(curC)cs.value=curC;if(curS)ss.value=curS;
+  renderAdminScores();
+}
+function renderAdminScores(){
+  const cid=G("a-class-select")&&G("a-class-select").value;
+  const sid=G("a-subject-select")&&G("a-subject-select").value;
+  if(!cid||!sid)return;
+  const sub=cache.subjects.find(s=>s.id===sid);
+  G("a-passmark-label").textContent=sub?"Kufaulu: "+sub.passmark:"";
+  const studs=cache.students.filter(s=>s.classId===cid);
+  const list=G("a-score-list");
+  if(!studs.length){list.innerHTML="<p class='empty'>Hakuna wanafunzi. Ongeza kwenye Wanafunzi.</p>";return}
+  list.innerHTML=studs.map(st=>{
+    const sc=getScore(st._id,sid),g=sc!==""?getGrade(Number(sc)):null;
+    return scoreRow(st,sid,sc,g);
+  }).join("");
+}
+
+// ══ ADMIN STUDENTS ══
+function renderAdminStudentsTab(){
+  const sel=G("a-class-select2");
+  const cur=sel.value;
+  sel.innerHTML=cache.classes.map(c=>"<option value='"+esc(c.id)+"'>"+esc(c.name)+"</option>").join("");
+  if(cur)sel.value=cur;
+  renderAdminStudents();
+}
+function renderAdminStudents(){
+  const cid=G("a-class-select2")&&G("a-class-select2").value;
+  if(!cid)return;
+  const studs=cache.students.filter(s=>s.classId===cid);
+  G("a-student-list").innerHTML=studs.length?studs.map(s=>
+    "<div class='row'><span class='name'>"+esc(s.name)+"</span>"+
+    "<button class='btn btn-sm btn-danger' onclick='removeStudent(\""+esc(s._id)+"\",\"admin\")'>Ondoa</button></div>"
+  ).join(""):"<p class='empty' style='padding:10px 0'>Hakuna wanafunzi bado.</p>";
+}
+async function addAdminStudent(){
+  const inp=G("a-new-student"),n=inp.value.trim();
+  if(!n)return;
+  const cid=G("a-class-select2").value;
+  const studs=cache.students.filter(s=>s.classId===cid);
+  if(studs.find(s=>s.name.toLowerCase()===n.toLowerCase())){toast("Tayari yupo","red");return}
+  const id="s"+Date.now();
+  const student={_id:id,name:n,classId:cid};
+  cache.students.push(student);
+  if(fbReady) await fsSet("gx_students",id,{name:n,classId:cid});
+  else saveLocalCache();
+  inp.value="";renderAdminStudents();toast("&#10003; "+esc(n));
+}
+
+// ══ ADMIN ANALYSIS ══
+function renderAdminAnalysisTab(){
+  const sel=G("a-analysis-class");
+  const cur=sel.value;
+  sel.innerHTML=cache.classes.map(c=>"<option value='"+esc(c.id)+"'>"+esc(c.name)+"</option>").join("");
+  if(cur)sel.value=cur;
+  renderAdminAnalysis();
+}
+function renderAdminAnalysis(){
+  const cid=G("a-analysis-class")&&G("a-analysis-class").value;
+  if(!cid){G("a-analysis-content").innerHTML="";return}
+  const cls=cache.classes.find(c=>c.id===cid);
+  const studs=cache.students.filter(s=>s.classId===cid);
+  if(!studs.length){G("a-analysis-content").innerHTML="<div class='card'><p class='empty'>Hakuna wanafunzi.</p></div>";return}
+  G("a-analysis-content").innerHTML=cache.subjects.map(sub=>{
+    const ent=studs.map(s=>({name:s.name,score:getScore(s._id,sub.id)})).filter(x=>x.score!=="");
+    return ent.length?buildCard(sub,ent,studs.length):"<div class='card'><div style='font-weight:600;margin-bottom:4px'>"+esc(sub.name)+"</div><p style='color:#475569;font-size:13px'>Hakuna matokeo.</p></div>";
+  }).join("");
+}
+
+// ══ TEACHERS ══
+function renderTeachers(){
+  const sel=G("new-teacher-class");
+  sel.innerHTML=cache.classes.map(c=>"<option value='"+esc(c.id)+"'>"+esc(c.name)+"</option>").join("");
+  // Subject suggestions
+  const sugBox=G("subject-suggestions");
+  if(sugBox){
+    sugBox.innerHTML=cache.subjects.map(s=>
+      "<span onclick='G(\"new-teacher-subject-text\").value=\""+esc(s.name)+"\"' style='display:inline-block;background:#6366f120;color:#a5b4fc;border:1px solid #6366f140;border-radius:20px;padding:4px 12px;font-size:12px;margin:3px;cursor:pointer'>"+esc(s.name)+"</span>"
+    ).join("");
+  }
+
+  let html = "";
+
+  // Show headmasters first
+  const hms=cache.users.filter(u=>u.role==="headmaster");
+  if(hms.length){
+    html+="<div style='font-size:11px;color:#f59e0b;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px'>&#127891; Wakuu wa Shule</div>";
+    html+=hms.map(t=>{
+      const perms=t.permissions||{};
+      const permCount=Object.values(perms).filter(v=>v).length;
+      const tid=esc(t._id||t.id);
+      return"<div class='teacher-pill' style='border-color:#f59e0b40;margin-bottom:8px'>"+
+        "<div class='tp-info'><div class='tp-name'>"+esc(t.name)+"</div>"+
+        "<div class='tp-class'>@"+esc(t.username)+" &middot; <span style='color:#f59e0b'>Mkuu wa Shule</span> &middot; <span style='color:#64748b'>Ruhusa: "+permCount+"</span></div></div>"+
+        "<div style='display:flex;gap:6px'>"+
+        "<button class='btn btn-sm' style='background:#d97706' onclick='openEditTeacher(\""+tid+"\")'>&#9998;</button>"+
+        "<button class='btn btn-sm btn-danger' onclick='removeTeacher(\""+tid+"\")'>Futa</button>"+
+        "</div></div>";
+    }).join("");
+    html+="<div style='font-size:11px;color:#64748b;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin:12px 0 8px'>&#128101; Walimu</div>";
+  }
+
+  const ts=cache.users.filter(u=>u.role==="teacher");
+  if(ts.length){
+    html+=ts.map(t=>{
+      const cls=cache.classes.find(c=>c.id===t.classId);
+      const sub=t.subjectId?cache.subjects.find(s=>s.id===t.subjectId):null;
+      const subLabel=sub?sub.name:(t.subjectId?t.subjectId.replace("custom_","").replace(/_/g," "):"Hakuna somo");
+      const tid=esc(t._id||t.id);
+      return"<div class='teacher-pill' style='cursor:pointer' onclick='openTeacherDetail(\"" + tid + "\")'><div class='tp-info'>"+
+        "<div class='tp-name'>"+esc(t.name)+"</div>"+
+        "<div class='tp-class'>@"+esc(t.username)+" &middot; "+(cls?esc(cls.name):"—")+" &middot; <span style='color:#a5b4fc'>"+esc(subLabel)+"</span></div>"+
+        "</div>"+
+        "<div style='display:flex;gap:6px'>"+
+        "<button class='btn btn-sm' style='background:#1d4ed8' onclick='openEditTeacher(\""+tid+"\")'>&#9998;</button>"+
+        "<button class='btn btn-sm btn-danger' onclick='removeTeacher(\""+tid+"\")'>Futa</button>"+
+        "</div></div>";
+    }).join("");
+  } else if(!hms.length){
+    html="<p class='empty'>Hakuna walimu bado.</p>";
+  }
+
+  G("teachers-list").innerHTML=html;
+  renderTeacherActivity();
+}
+async function addTeacher(){
+  const n=G("new-teacher-name").value.trim(),u=G("new-teacher-user").value.trim().toLowerCase(),p=G("new-teacher-pass").value,c=G("new-teacher-class").value;
+  const subjectText=G("new-teacher-subject-text").value.trim();
+  if(!n||!u||!p||!subjectText){toast("Jaza sehemu zote — pamoja na somo","red");return}
+  // Find existing subject or CREATE new one automatically
+  let existingSub=cache.subjects.find(s=>s.name.toLowerCase()===subjectText.toLowerCase());
+  let sid;
+  if(existingSub){
+    sid=existingSub.id;
+  } else {
+    // Create new subject automatically
+    sid="sub"+Date.now();
+    const newSub={id:sid,name:subjectText,passmark:41};
+    cache.subjects.push(newSub);
+    if(fbReady) await db.collection("gx_config").doc("main").update({subjects:cache.subjects});
+    else saveLocalCache();
+    toast("✓ Somo '"+esc(subjectText)+"' limeongezwa kiotomatiki");
+  }
+  if(cache.users.find(x=>x.username.toLowerCase()===u)){toast("Username tayari ipo","red");return}
+  const id="t"+Date.now();
+  const teacherData={username:u,password:hashPass(p),role:"teacher",name:n,classId:c};
+  if(sid) teacherData.subjectId=sid;
+  const teacher={_id:id,...teacherData};
+  cache.users.push(teacher);
+  if(fbReady) await fsSet("gx_users",id,teacherData);
+  else saveLocalCache();
+  G("new-teacher-name").value="";G("new-teacher-user").value="";G("new-teacher-pass").value="";if(G("new-teacher-subject-text"))G("new-teacher-subject-text").value="";
+  renderTeachers();toast("&#10003; "+esc(n)+" ameongezwa");
+}
+async function removeTeacher(id){
+  if(!confirm("Futa mwalimu huyu?"))return;
+  cache.users=cache.users.filter(u=>(u._id||u.id)!==id);
+  if(fbReady) await fsDel("gx_users",id);
+  else saveLocalCache();
+  renderTeachers();toast("Mwalimu amefutwa");
+}
+
+function openEditTeacher(id){
+  const t=cache.users.find(u=>(u._id||u.id)===id);
+  if(!t)return;
+  G("edit-tid").value=id;
+  G("edit-tname").value=t.name;
+  G("edit-tuser").value=t.username;
+  G("edit-tpass").value="";
+  const cs=G("edit-tclass");
+  cs.innerHTML=cache.classes.map(c=>"<option value='"+esc(c.id)+"'"+(c.id===t.classId?" selected":"")+">"+esc(c.name)+"</option>").join("");
+  const sub=t.subjectId?cache.subjects.find(s=>s.id===t.subjectId):null;
+  const subLabel=sub?sub.name:(t.subjectId?t.subjectId.replace("custom_","").replace(/_/g," "):"");
+  G("edit-tsubject").value=subLabel;
+  G("edit-tsug").innerHTML=cache.subjects.map(s=>
+    "<span onclick='G(\"edit-tsubject\").value=\""+esc(s.name)+"\"' style='display:inline-block;background:#6366f120;color:#a5b4fc;border:1px solid #6366f140;border-radius:20px;padding:4px 12px;font-size:12px;margin:3px;cursor:pointer'>"+esc(s.name)+"</span>"
+  ).join("");
+  G("edit-modal").style.display="flex";
+}
+
+async function saveEditTeacher(){
+  const id=G("edit-tid").value;
+  const n=G("edit-tname").value.trim();
+  const u=G("edit-tuser").value.trim().toLowerCase();
+  const p=G("edit-tpass").value;
+  const c=G("edit-tclass").value;
+  const subjectText=G("edit-tsubject").value.trim();
+  if(!n||!u||!subjectText){toast("Jaza sehemu zote","red");return}
+  const dup=cache.users.find(x=>x.username.toLowerCase()===u&&(x._id||x.id)!==id);
+  if(dup){toast("Username tayari ipo","red");return}
+  // Find or create subject
+  let existingSub=cache.subjects.find(s=>s.name.toLowerCase()===subjectText.toLowerCase());
+  let sid;
+  if(existingSub){
+    sid=existingSub.id;
+  } else {
+    sid="sub"+Date.now();
+    cache.subjects.push({id:sid,name:subjectText,passmark:41});
+    if(fbReady) await db.collection("gx_config").doc("main").update({subjects:cache.subjects});
+    else saveLocalCache();
+  }
+  const idx=cache.users.findIndex(x=>(x._id||x.id)===id);
+  if(idx>-1){
+    cache.users[idx].name=n;
+    cache.users[idx].username=u;
+    cache.users[idx].classId=c;
+    cache.users[idx].subjectId=sid;
+    if(p) cache.users[idx].password=hashPass(p);
+    const updateData={name:n,username:u,classId:c,subjectId:sid};
+    if(p) updateData.password=hashPass(p);
+    if(fbReady) await fsSet("gx_users",id,updateData);
+    else saveLocalCache();
+  }
+  G("edit-modal").style.display="none";
+  renderTeachers();
+  toast("&#10003; Mabadiliko yamehifadhiwa");
+}
+
+// ══ REPORT ══
+function renderReport(){
+  let h="<div class='export-bar'><button class='btn-export btn-pdf' onclick='exportAdminPDF()'>&#128424; Chapisha</button><button class='btn-export btn-rtf' onclick='exportAdminRTF()'>&#128196; Pakua Word</button></div>";
+  cache.classes.forEach(cls=>{
+    const cs=cache.students.filter(s=>s.classId===cls.id);
+    h+="<div style='font-weight:700;font-size:15px;padding:4px 0 10px;border-bottom:1px solid #1e293b;margin-bottom:12px'>"+esc(cls.name)+"</div>";
+    if(!cs.length){h+="<div class='card'><p class='empty'>Hakuna wanafunzi.</p></div>";return}
+    cache.subjects.forEach(sub=>{
+      const ent=cs.map(s=>({name:s.name,score:getScore(s._id,sub.id)})).filter(x=>x.score!=="");
+      h+=ent.length?buildCard(sub,ent,cs.length,cls.name):"<div class='card'><div style='font-weight:600;margin-bottom:4px'>"+esc(cls.name)+" &middot; "+esc(sub.name)+"</div><p style='color:#475569;font-size:13px'>Hakuna matokeo.</p></div>";
+    });
+  });
+  G("report-content").innerHTML=h;
+}
+
+// ══ SETTINGS ══
+function renderSettings(){
+  G("subjects-list").innerHTML=cache.subjects.length?cache.subjects.map(s=>
+    "<div class='row'><span class='name'>"+esc(s.name)+"</span>"+
+    "<span style='font-size:12px;color:#64748b;margin-right:8px'>Kufaulu: "+s.passmark+"</span>"+
+    "<button class='btn btn-sm btn-danger' onclick='removeSubject(\""+esc(s.id)+"\")'>Futa</button></div>"
+  ).join(""):"<p class='empty'>Hakuna masomo.</p>";
+}
+async function addSubject(){
+  const n=G("new-subject-name").value.trim(),pm=parseInt(G("new-subject-pass").value)||41;
+  if(!n)return;
+  const id="sub"+Date.now();
+  cache.subjects.push({id,name:n,passmark:pm});
+  if(fbReady) await db.collection("gx_config").doc("main").update({subjects:cache.subjects});
+  else saveLocalCache();
+  G("new-subject-name").value="";renderSettings();toast("&#10003; "+esc(n));
+}
+async function removeSubject(id){
+  cache.subjects=cache.subjects.filter(s=>s.id!==id);
+  if(fbReady) await db.collection("gx_config").doc("main").update({subjects:cache.subjects});
+  else saveLocalCache();
+  renderSettings();toast("Somo limefutwa");
+}
+async function changeAdminPass(){
+  const p1=G("new-admin-pass").value,p2=G("confirm-admin-pass").value;
+  if(!p1){toast("Weka nywila mpya","red");return}
+  if(p1!==p2){toast("Nywila hazifanani","red");return}
+  const hp=hashPass(p1);
+  const adminUser=cache.users.find(u=>u.role==="admin");
+  if(adminUser){adminUser.password=hp;}
+  if(fbReady){
+    const snap=await db.collection("gx_users").where("role","==","admin").limit(1).get();
+    if(!snap.empty) await snap.docs[0].ref.update({password:hp});
+  } else saveLocalCache();
+  G("new-admin-pass").value="";G("confirm-admin-pass").value="";
+  toast("&#10003; Nywila imebadilishwa");
+}
+async function clearStudentData(){
+  if(!confirm("Futa wanafunzi na matokeo yote? Walimu na masomo hayatafutwa."))return;
+  cache.students=[];cache.results={};
+  if(fbReady){
+    const batch=db.batch();
+    const [sSnap,rSnap]=await Promise.all([db.collection("gx_students").get(),db.collection("gx_results").get()]);
+    sSnap.docs.forEach(d=>batch.delete(d.ref));
+    rSnap.docs.forEach(d=>batch.delete(d.ref));
+    await batch.commit();
+  } else saveLocalCache();
+  toast("Imefutwa");renderOverview();
+}
+
+// ══ TEACHER ══
+function getTStu(){return CU&&CU.role==="teacher"?cache.students.filter(s=>s.classId===CU.classId):[]}
+function renderTeacherScores(){
+  const sel=G("t-subject-select"),cur=sel.value;
+  // Filter subjects by teacher's assigned subject
+  const allowedSubjects = CU&&CU.subjectId
+    ? cache.subjects.filter(s=>s.id===CU.subjectId)
+    : cache.subjects;
+  sel.innerHTML=allowedSubjects.map(s=>"<option value='"+esc(s.id)+"'>"+esc(s.name)+" (Kufaulu: "+s.passmark+")</option>").join("");
+  if(cur&&allowedSubjects.find(s=>s.id===cur))sel.value=cur;
+  const sid=sel.value,sub=cache.subjects.find(s=>s.id===sid);
+  G("t-passmark-label").textContent=sub?"Kufaulu: "+sub.passmark:"";
+  const ss=getTStu(),list=G("t-score-list");
+  if(!ss.length){list.innerHTML="<p class='empty'>Ongeza wanafunzi.</p>";return}
+  list.innerHTML=ss.map(st=>{
+    const sc=getScore(st._id,sid),g=sc!==""?getGrade(Number(sc)):null;
+    return scoreRow(st,sid,sc,g);
+  }).join("");
+}
+function renderTeacherAnalysis(){
+  const ss=getTStu();
+  if(!ss.length){G("t-analysis-content").innerHTML="<div class='card'><p class='empty'>Ongeza wanafunzi kwanza.</p></div>";return}
+  // Show only teacher's assigned subject
+  const allowedSubjects = CU&&CU.subjectId
+    ? cache.subjects.filter(s=>s.id===CU.subjectId)
+    : cache.subjects;
+  G("t-analysis-content").innerHTML=allowedSubjects.map(sub=>{
+    const ent=ss.map(s=>({name:s.name,score:getScore(s._id,sub.id)})).filter(x=>x.score!=="");
+    return ent.length?buildCard(sub,ent,ss.length):"<div class='card'><div style='font-weight:700;margin-bottom:6px'>"+esc(sub.name)+"</div><p style='color:#475569;font-size:13px'>Hakuna matokeo.</p></div>";
+  }).join("");
+}
+function renderTeacherStudents(){
+  const ss=getTStu();
+  G("t-student-list").innerHTML=ss.length?ss.map(s=>
+    "<div class='row'><span class='name'>"+esc(s.name)+"</span>"+
+    "<button class='btn btn-sm btn-danger' onclick='removeStudent(\""+esc(s._id)+"\",\"teacher\")'>Ondoa</button></div>"
+  ).join(""):"<p class='empty' style='padding:10px 0'>Hakuna wanafunzi bado.</p>";
+}
+async function addStudent(){
+  const inp=G("new-student-name"),n=inp.value.trim();if(!n)return;
+  const ss=getTStu();
+  if(ss.find(s=>s.name.toLowerCase()===n.toLowerCase())){toast("Tayari yupo","red");return}
+  const id="s"+Date.now();
+  const student={_id:id,name:n,classId:CU.classId};
+  cache.students.push(student);
+  if(fbReady) await fsSet("gx_students",id,{name:n,classId:CU.classId});
+  else saveLocalCache();
+  inp.value="";renderTeacherStudents();toast("&#10003; "+esc(n));
+}
+async function removeStudent(id,caller){
+  // FIX #1 & #3: delete results too, call correct render
+  cache.students=cache.students.filter(s=>s._id!==id);
+  // Delete all results for this student
+  const keysToDelete=Object.keys(cache.results).filter(k=>k.startsWith(escId(id)+"__"));
+  keysToDelete.forEach(k=>delete cache.results[k]);
+  if(fbReady){
+    const batch=db.batch();
+    batch.delete(db.collection("gx_students").doc(id));
+    for(const k of keysToDelete) batch.delete(db.collection("gx_results").doc(k));
+    await batch.commit();
+  } else saveLocalCache();
+  if(caller==="admin") renderAdminStudents();
+  else renderTeacherStudents();
+  toast("Ameondolewa");
+}
+
+// ══ SCORE INPUT HANDLER ══
+function hs(el,studentId,subjectId){
+  const v=el.value;
+  saveScore(studentId,subjectId,v===""?"":v);
+  const row=el.closest(".row"),badge=row.querySelector(".gb");
+  if(v===""){
+    badge.style.cssText="border-radius:6px;padding:3px 9px;font-size:12px;font-weight:700;min-width:26px;text-align:center;display:inline-block";
+    badge.textContent="";el.style.borderColor="#2d3748";el.style.color="#e2e8f0";
+  } else {
+    const g=getGrade(Number(v));
+    badge.style.cssText="background:"+g.color+"20;color:"+g.color+";border-radius:6px;padding:3px 9px;font-size:12px;font-weight:700;min-width:26px;text-align:center;display:inline-block";
+    badge.textContent=g.label;el.style.borderColor=g.color+"60";el.style.color=g.color;
+  }
+}
+
+// ══ SHARED SCORE ROW BUILDER ══
+function scoreRow(st,sid,sc,g){
+  return"<div class='row'><span class='name'>"+esc(st.name)+"</span>"+
+  "<span class='gb' style='"+(g?"background:"+g.color+"20;color:"+g.color+";":"")+"border-radius:6px;padding:3px 9px;font-size:12px;font-weight:700;min-width:26px;text-align:center;display:inline-block'>"+(g?g.label:"")+"</span>"+
+  "<input class='score-input' type='number' min='0' max='100' placeholder='—' value='"+sc+"'"+
+  " style='border-color:"+(g?g.color+"60":"#2d3748")+";color:"+(g?g.color:"#e2e8f0")+"'"+
+  " oninput='hs(this,\""+esc(st._id)+"\",\""+esc(sid)+"\")'>"+
+  "</div>";
+}
+
+// ══ ANALYSIS CARD BUILDER ══
+function buildCard(sub,entries,total,clsName){
+  const nums=entries.map(e=>Number(e.score));
+  const avg=(nums.reduce((a,b)=>a+b,0)/nums.length).toFixed(1);
+  const pass=nums.filter(s=>s>=sub.passmark).length,fail=nums.length-pass,rate=Math.round(pass/nums.length*100);
+  const ranked=entries.slice().sort((a,b)=>b.score-a.score),top=ranked[0],bot=ranked[ranked.length-1];
+  const dist={};GRADES.forEach(g=>dist[g.label]=0);nums.forEach(s=>dist[getGrade(s).label]++);
+  const maxD=Math.max(...Object.values(dist),1);
+  let h="<div class='card'><div style='display:flex;justify-content:space-between;align-items:center;margin-bottom:12px'>";
+  h+="<div style='font-weight:700;font-size:15px'>"+(clsName?esc(clsName)+" &middot; ":"")+esc(sub.name)+"</div>";
+  h+="<span style='font-size:12px;color:#64748b'>"+entries.length+"/"+total+"</span></div>";
+  h+="<div class='stat-grid'>";
+  h+="<div class='stat-box'><div class='stat-val'>"+avg+"</div><div class='stat-lbl'>Wastani</div></div>";
+  h+="<div class='stat-box'><div class='stat-val' style='color:#22c55e'>"+pass+"</div><div class='stat-lbl'>Waliofaulu</div></div>";
+  h+="<div class='stat-box'><div class='stat-val' style='color:#ef4444'>"+fail+"</div><div class='stat-lbl'>Waliofeli</div></div>";
+  h+="<div class='stat-box'><div class='stat-val' style='color:#f59e0b'>"+rate+"%</div><div class='stat-lbl'>Kiwango</div></div></div>";
+  h+="<div class='top-bottom'>";
+  h+="<div class='top-box'><div class='box-tag' style='color:#16a34a'>&#127942; BORA</div><div class='box-name'>"+esc(top.name)+"</div><div class='box-score' style='color:#22c55e'>"+top.score+"</div></div>";
+  h+="<div class='bot-box'><div class='box-tag' style='color:#dc2626'>&#8595; CHINI</div><div class='box-name'>"+esc(bot.name)+"</div><div class='box-score' style='color:#ef4444'>"+bot.score+"</div></div></div>";
+  h+="<div class='section-sep'>Mgawanyo wa Alama</div>";
+  GRADES.forEach(g=>{h+="<div class='dist-row'><span class='badge' style='background:"+g.color+"20;color:"+g.color+";min-width:26px'>"+g.label+"</span><div class='dist-bar-wrap'><div class='dist-bar' style='width:"+Math.round(dist[g.label]/maxD*100)+"%;background:"+g.color+"'></div></div><span class='dist-count'>"+dist[g.label]+"</span></div>"});
+  h+="<div class='section-sep'>Orodha</div>";
+  ranked.forEach((r,i)=>{const g=getGrade(Number(r.score));h+="<div class='rank-row'><span class='rank-num'>#"+(i+1)+"</span><span class='rank-name'>"+esc(r.name)+"</span><span class='badge' style='background:"+g.color+"20;color:"+g.color+"'>"+g.label+"</span><span style='font-size:14px;font-weight:700;color:"+g.color+"'>"+r.score+"</span></div>"});
+  return h+"</div>";
+}
+
+// ══ PRINT HTML BUILDER ══
+function makePrintHTML(label,studs){
+  const d=new Date().toLocaleDateString("en-GB");
+  let h="<!DOCTYPE html><html><head><meta charset='UTF-8'><title>Matokeo<\/title><style>body{font-family:Arial,sans-serif;max-width:720px;margin:0 auto;padding:20px;color:#000}h1{font-size:20px;margin-bottom:4px}h2{font-size:16px;margin:20px 0 6px;border-bottom:2px solid #000;padding-bottom:3px}.meta{font-size:12px;color:#555;margin-bottom:14px}.stats{display:flex;gap:8px;margin-bottom:8px}.stat{flex:1;border:1px solid #ccc;border-radius:4px;padding:8px;text-align:center}.sv{font-size:18px;font-weight:700}.sl{font-size:10px;color:#555}.hl{display:flex;gap:8px;margin-bottom:8px}.hi{flex:1;border:1px solid #ccc;border-radius:4px;padding:8px}.ht{font-size:10px;font-weight:700;margin-bottom:2px}.hn{font-size:12px;font-weight:600}.hs{font-size:14px;font-weight:700}table{width:100%;border-collapse:collapse;margin-bottom:8px}th{background:#f0f0f0;padding:6px 8px;text-align:left;font-size:11px;border:1px solid #ccc}td{padding:6px 8px;font-size:12px;border:1px solid #ccc}tr:nth-child(even){background:#fafafa}.pass{color:#16a34a;font-weight:700}.fail{color:#dc2626;font-weight:700}<\/style><\/head><body>";
+  h+="<h1>Ripoti &mdash; "+label+"<\/h1><p class='meta'>Tarehe: "+d+" | Wanafunzi: "+studs.length+"<\/p>";
+  cache.subjects.forEach(function(sub){
+    var ent=studs.map(function(s){return{name:s.name,score:getScore(s._id,sub.id)}}).filter(function(x){return x.score!==""});
+    if(!ent.length)return;
+    var nums=ent.map(function(e){return Number(e.score)});
+    var avg=(nums.reduce(function(a,b){return a+b},0)/nums.length).toFixed(1);
+    var pass=nums.filter(function(s){return s>=sub.passmark}).length,fail=nums.length-pass,rate=Math.round(pass/nums.length*100);
+    var ranked=ent.slice().sort(function(a,b){return b.score-a.score});
+    h+="<h2>"+sub.name+"<\/h2><div class='stats'><div class='stat'><div class='sv'>"+avg+"<\/div><div class='sl'>Wastani<\/div><\/div><div class='stat'><div class='sv'>"+pass+"<\/div><div class='sl'>Faulu<\/div><\/div><div class='stat'><div class='sv'>"+fail+"<\/div><div class='sl'>Feli<\/div><\/div><div class='stat'><div class='sv'>"+rate+"%<\/div><div class='sl'>Kiwango<\/div><\/div><\/div>";
+    h+="<div class='hl'><div class='hi'><div class='ht'>BORA<\/div><div class='hn'>"+ranked[0].name+"<\/div><div class='hs'>"+ranked[0].score+"<\/div><\/div><div class='hi'><div class='ht'>CHINI<\/div><div class='hn'>"+ranked[ranked.length-1].name+"<\/div><div class='hs'>"+ranked[ranked.length-1].score+"<\/div><\/div><\/div>";
+    h+="<table><tr><th>#<\/th><th>Jina<\/th><th>Alama<\/th><th>Daraja<\/th><th>Matokeo<\/th><\/tr>";
+    ranked.forEach(function(r,i){var g=getGrade(Number(r.score));var pf=Number(r.score)>=sub.passmark?"FAULU":"FELI";h+="<tr><td>"+(i+1)+"<\/td><td>"+r.name+"<\/td><td><b>"+r.score+"<\/b><\/td><td>"+g.label+"<\/td><td class='"+(pf==="FAULU"?"pass":"fail")+"'>"+pf+"<\/td><\/tr>"});
+    h+="<\/table>";
+  });
+  return h+"<\/body><\/html>";
+}
+
+function buildRTF(label,studs){
+  const d=new Date().toLocaleDateString("en-GB");
+  let r="{\\rtf1\\ansi\\deff0{\\fonttbl{\\f0 Arial;}}\\f0\\fs28\\qc\\b Ripoti - "+label+"\\b0\\par\\fs20\\qc Tarehe: "+d+"\\par\\par\\ql ";
+  cache.subjects.forEach(function(sub){
+    var ent=studs.map(function(s){return{name:s.name,score:getScore(s._id,sub.id)}}).filter(function(x){return x.score!==""});
+    if(!ent.length)return;
+    var nums=ent.map(function(e){return Number(e.score)});
+    var avg=(nums.reduce(function(a,b){return a+b},0)/nums.length).toFixed(1);
+    var pass=nums.filter(function(s){return s>=sub.passmark}).length;
+    var ranked=ent.slice().sort(function(a,b){return b.score-a.score});
+    r+="\\fs24\\b "+sub.name+"\\b0\\par\\fs20 Wastani: \\b "+avg+"\\b0  Faulu: \\b "+pass+"\\b0  Feli: \\b "+(nums.length-pass)+"\\b0\\par";
+    r+="\\trowd\\cellx800\\cellx3600\\cellx4800\\cellx5700\\cellx6600\\intbl\\b #\\cell Jina\\cell Alama\\cell Daraja\\cell Matokeo\\cell\\b0\\row ";
+    ranked.forEach(function(rv,i){var g=getGrade(Number(rv.score));var pf=Number(rv.score)>=sub.passmark?"FAULU":"FELI";r+="\\trowd\\cellx800\\cellx3600\\cellx4800\\cellx5700\\cellx6600\\intbl "+(i+1)+"\\cell "+rv.name+"\\cell "+rv.score+"\\cell "+g.label+"\\cell "+pf+"\\cell\\row "});
+    r+="\\par ";
+  });
+  return r+"}";
+}
+
+// ══ EXPORTS ══
+function openPrint(html){
+  var w=window.open("","_blank");
+  if(w){w.document.write(html);w.document.close();setTimeout(function(){w.print()},600)}
+  else{toast("Ruhusu popups kwenye browser","red")}
+}
+function downloadRTF(rtf,fname){
+  var b=new Blob([rtf],{type:"application/rtf"});
+  var u=URL.createObjectURL(b),a=document.createElement("a");
+  a.href=u;a.download=fname;a.click();URL.revokeObjectURL(u);
+  toast("&#10003; Imepakuliwa!");
+}
+
+function exportPDF(){
+  if(!CU)return;
+  const ss=getTStu(),cls=cache.classes.find(c=>c.id===CU.classId);
+  openPrint(makePrintHTML(cls?cls.name:"Darasa",ss));
+}
+function exportRTF(){
+  if(!CU)return;
+  const ss=getTStu(),cls=cache.classes.find(c=>c.id===CU.classId),label=cls?cls.name:"Darasa";
+  downloadRTF(buildRTF(label,ss),"galaxy-"+label.replace(/ /g,"-")+".rtf");
+}
+function exportAdminClassPDF(){
+  const cid=G("a-analysis-class")&&G("a-analysis-class").value;
+  const cls=cache.classes.find(c=>c.id===cid);
+  const studs=cache.students.filter(s=>s.classId===cid);
+  openPrint(makePrintHTML(cls?cls.name:"Darasa",studs));
+}
+function exportAdminClassRTF(){
+  const cid=G("a-analysis-class")&&G("a-analysis-class").value;
+  const cls=cache.classes.find(c=>c.id===cid);
+  const studs=cache.students.filter(s=>s.classId===cid);
+  const label=cls?cls.name:"Darasa";
+  downloadRTF(buildRTF(label,studs),"galaxy-"+label.replace(/ /g,"-")+".rtf");
+}
+function exportAdminPDF(){
+  let h="<!DOCTYPE html><html><head><meta charset='UTF-8'><title>Ripoti ya Shule<\/title><style>body{font-family:Arial,sans-serif;max-width:720px;margin:0 auto;padding:20px;color:#000}h1{font-size:22px}h2{font-size:18px;margin:20px 0 4px;color:#1d4ed8;border-bottom:2px solid #1d4ed8;padding-bottom:3px}h3{font-size:14px;margin:12px 0 5px}.stats{display:flex;gap:6px;margin-bottom:6px}.stat{flex:1;border:1px solid #ccc;border-radius:4px;padding:6px;text-align:center}.sv{font-size:16px;font-weight:700}.sl{font-size:10px;color:#555}.meta{font-size:12px;color:#555;margin-bottom:14px}table{width:100%;border-collapse:collapse;margin-bottom:8px}th{background:#f0f0f0;padding:5px 7px;text-align:left;font-size:11px;border:1px solid #ccc}td{padding:5px 7px;font-size:12px;border:1px solid #ccc}.pass{color:#16a34a;font-weight:700}.fail{color:#dc2626;font-weight:700}<\/style><\/head><body><h1>Ripoti ya Shule Yote<\/h1><p class='meta'>Tarehe: "+new Date().toLocaleDateString("en-GB")+"<\/p>";
+  cache.classes.forEach(function(cls){
+    var cs=cache.students.filter(function(s){return s.classId===cls.id});
+    if(!cs.length)return;
+    h+="<h2>"+cls.name+"<\/h2>";
+    cache.subjects.forEach(function(sub){
+      var ent=cs.map(function(s){return{name:s.name,score:getScore(s._id,sub.id)}}).filter(function(x){return x.score!==""});
+      if(!ent.length)return;
+      var nums=ent.map(function(e){return Number(e.score)});
+      var avg=(nums.reduce(function(a,b){return a+b},0)/nums.length).toFixed(1);
+      var pass=nums.filter(function(s){return s>=sub.passmark}).length;
+      var ranked=ent.slice().sort(function(a,b){return b.score-a.score});
+      h+="<h3>"+sub.name+"<\/h3><div class='stats'><div class='stat'><div class='sv'>"+avg+"<\/div><div class='sl'>Wastani<\/div><\/div><div class='stat'><div class='sv'>"+pass+"<\/div><div class='sl'>Faulu<\/div><\/div><div class='stat'><div class='sv'>"+(nums.length-pass)+"<\/div><div class='sl'>Feli<\/div><\/div><\/div>";
+      h+="<table><tr><th>#<\/th><th>Jina<\/th><th>Alama<\/th><th>Daraja<\/th><th>Matokeo<\/th><\/tr>";
+      ranked.forEach(function(r,i){var g=getGrade(Number(r.score));var pf=Number(r.score)>=sub.passmark?"FAULU":"FELI";h+="<tr><td>"+(i+1)+"<\/td><td>"+r.name+"<\/td><td><b>"+r.score+"<\/b><\/td><td>"+g.label+"<\/td><td class='"+(pf==="FAULU"?"pass":"fail")+"'>"+pf+"<\/td><\/tr>"});
+      h+="<\/table>";
+    });
+  });
+  openPrint(h+"<\/body><\/html>");
+}
+function exportAdminRTF(){
+  const d=new Date().toLocaleDateString("en-GB");
+  let r="{\\rtf1\\ansi\\deff0{\\fonttbl{\\f0 Arial;}}\\f0\\fs30\\qc\\b Ripoti ya Shule Yote\\b0\\par\\fs20\\qc Tarehe: "+d+"\\par\\par\\ql ";
+  cache.classes.forEach(function(cls){
+    var cs=cache.students.filter(function(s){return s.classId===cls.id});
+    if(!cs.length)return;
+    r+="\\fs26\\b "+cls.name+"\\b0\\par ";
+    cache.subjects.forEach(function(sub){
+      var ent=cs.map(function(s){return{name:s.name,score:getScore(s._id,sub.id)}}).filter(function(x){return x.score!==""});
+      if(!ent.length)return;
+      var nums=ent.map(function(e){return Number(e.score)});
+      var avg=(nums.reduce(function(a,b){return a+b},0)/nums.length).toFixed(1);
+      var pass=nums.filter(function(s){return s>=sub.passmark}).length;
+      var ranked=ent.slice().sort(function(a,b){return b.score-a.score});
+      r+="\\fs22\\b "+sub.name+"\\b0  Wastani: \\b "+avg+"\\b0  Faulu: \\b "+pass+"\\b0\\par";
+      r+="\\trowd\\cellx800\\cellx3600\\cellx4800\\cellx5700\\cellx6600\\intbl\\b #\\cell Jina\\cell Alama\\cell Daraja\\cell Matokeo\\cell\\b0\\row ";
+      ranked.forEach(function(rv,i){var g=getGrade(Number(rv.score));var pf=Number(rv.score)>=sub.passmark?"FAULU":"FELI";r+="\\trowd\\cellx800\\cellx3600\\cellx4800\\cellx5700\\cellx6600\\intbl "+(i+1)+"\\cell "+rv.name+"\\cell "+rv.score+"\\cell "+g.label+"\\cell "+pf+"\\cell\\row "});
+      r+="\\par ";
+    });
+  });
+  downloadRTF(r+"}","ripoti-shule-yote.rtf");
+}
+
+
+
+
+// ══ SEARCH ══
+function searchStudent(query, caller){
+  caller = caller || 'admin';
+  const resultsId = caller === 'teacher' ? 't-search-results' : 'search-results';
+  const resultsEl = G(resultsId);
+  if(!resultsEl) return;
+
+  if(!query || query.trim().length < 2){
+    resultsEl.style.display = 'none';
+    resultsEl.innerHTML = '';
+    return;
+  }
+
+  const q = query.toLowerCase().trim();
+  // Filter students based on role
+  let studs;
+  if(caller === 'teacher' && CU){
+    studs = cache.students.filter(s => s.classId === CU.classId);
+  } else {
+    studs = cache.students;
+  }
+
+  const matches = studs.filter(s => s.name.toLowerCase().includes(q)).slice(0, 8);
+
+  if(!matches.length){
+    resultsEl.style.display = 'block';
+    resultsEl.innerHTML = "<p class='empty' style='padding:12px'>Mwanafunzi hakupatikana</p>";
+    return;
+  }
+
+  resultsEl.innerHTML = matches.map(s => {
+    const cls = cache.classes.find(c => c.id === s.classId);
+    // Get all scores for this student
+    const scores = cache.subjects.map(sub => {
+      const sc = getScore(s._id, sub.id);
+      if(sc === '') return null;
+      const g = getGrade(Number(sc));
+      return {name: sub.name, score: sc, grade: g};
+    }).filter(Boolean);
+
+    const scoresHtml = scores.length
+      ? scores.map(sc => "<span class='score-chip' style='background:"+sc.grade.color+"20;color:"+sc.grade.color+"'>"+esc(sc.name)+": "+sc.score+" ("+sc.grade.label+")</span>").join('')
+      : "<span style='font-size:11px;color:#475569'>Hakuna matokeo bado</span>";
+
+    return "<div class='search-result-item' onclick='showStudentDetail(\""+esc(s._id)+"\")'>"+
+      "<div class='search-result-name'>"+esc(s.name)+"</div>"+
+      "<div class='search-result-class'>"+(cls?esc(cls.name):"—")+"</div>"+
+      "<div class='search-result-scores'>"+scoresHtml+"</div>"+
+      "</div>";
+  }).join('');
+
+  resultsEl.style.display = 'block';
+}
+
+function showStudentDetail(studentId){
+  const s = cache.students.find(st => st._id === studentId);
+  if(!s) return;
+  const cls = cache.classes.find(c => c.id === s.classId);
+
+  // Build detail modal
+  const scores = cache.subjects.map(sub => {
+    const sc = getScore(s._id, sub.id);
+    if(sc === '') return null;
+    const g = getGrade(Number(sc));
+    return {name: sub.name, score: Number(sc), grade: g, passmark: sub.passmark};
+  }).filter(Boolean);
+
+  const validScores = scores.map(s => s.score);
+  const avg = validScores.length ? (validScores.reduce((a,b)=>a+b,0)/validScores.length).toFixed(1) : '—';
+
+  let detail = "<div class='card' style='border-color:#6366f1'>";
+  detail += "<div style='display:flex;justify-content:space-between;align-items:center;margin-bottom:12px'>";
+  detail += "<div><div style='font-weight:700;font-size:17px'>"+esc(s.name)+"</div>";
+  detail += "<div style='font-size:12px;color:#64748b;margin-top:2px'>"+(cls?esc(cls.name):"—")+"</div></div>";
+  detail += "<div style='text-align:right'><div style='font-size:22px;font-weight:700;color:#a5b4fc'>"+avg+"</div><div style='font-size:11px;color:#475569'>Wastani</div></div>";
+  detail += "</div>";
+
+  if(scores.length){
+    scores.forEach(sc => {
+      const pct = Math.min(100, Math.round(sc.score / 100 * 100));
+      detail += "<div style='margin-bottom:10px'>";
+      detail += "<div style='display:flex;justify-content:space-between;margin-bottom:4px'>";
+      detail += "<span style='font-size:13px;font-weight:600'>"+esc(sc.name)+"</span>";
+      detail += "<span style='font-size:13px;font-weight:700;color:"+sc.grade.color+"'>"+sc.score+" ("+sc.grade.label+")</span>";
+      detail += "</div>";
+      detail += "<div style='background:#0a0f1e;border-radius:4px;height:8px;overflow:hidden'>";
+      detail += "<div style='width:"+pct+"%;background:"+sc.grade.color+";height:8px;border-radius:4px;transition:width .4s'></div>";
+      detail += "</div>";
+      detail += "<div style='font-size:10px;color:#475569;margin-top:2px'>Kufaulu: "+sc.passmark+"</div>";
+      detail += "</div>";
+    });
+  } else {
+    detail += "<p style='color:#475569;font-size:13px'>Hakuna matokeo bado.</p>";
+  }
+  detail += "</div>";
+
+  // Show in a modal-like overlay
+  G("student-detail-content").innerHTML = detail;
+  G("student-detail-modal").classList.add("open");
+
+  // Hide search results
+  const sr = G("search-results");
+  const tsr = G("t-search-results");
+  if(sr) sr.style.display = "none";
+  if(tsr) tsr.style.display = "none";
+}
+
+// Close search on outside click
+document.addEventListener("click", function(e){
+  if(!e.target.closest(".search-wrap") && !e.target.closest(".search-results")){
+    const sr=G("search-results"),tsr=G("t-search-results");
+    if(sr)sr.style.display="none";
+    if(tsr)tsr.style.display="none";
+  }
+});
+
+// ══ HEADMASTER ══
+const HM_PAGES=["hm-overview","hm-classes","hm-report","hm-students","hm-teachers","hm-enter"];
+function getHMPerms(){return CU&&CU.permissions||{}}
+
+function switchHM(name,btn){
+  document.querySelectorAll("#hm-tabs .tab-btn").forEach(b=>b.classList.remove("active"));
+  if(btn)btn.classList.add("active");
+  HM_PAGES.forEach(p=>{const e=G("page-"+p);if(e){e.classList.remove("active");e.style.display="none"}});
+  const pg=G("page-"+name);if(pg){pg.classList.add("active");pg.style.display="block"}
+  if(name==="hm-overview")renderHMOverview();
+  else if(name==="hm-classes")renderHMClasses();
+  else if(name==="hm-report")renderHMReport();
+  else if(name==="hm-students")renderHMStudentsTab();
+  else if(name==="hm-teachers")renderHMTeachersTab();
+  else if(name==="hm-enter")renderHMEnter();
+}
+
+function setupHMTabs(){
+  const p=getHMPerms();
+  const map={"hm-tab-overview":true,"hm-tab-classes":p.viewAll!==false,"hm-tab-report":p.report!==false,"hm-tab-students":p.addStudents===true,"hm-tab-teachers":p.addTeachers===true,"hm-tab-enter":p.enterResults===true};
+  Object.entries(map).forEach(([id,show])=>{const el=G(id);if(el)el.style.display=show?"":"none"});
+  const expBar=G("hm-export-bar");if(expBar)expBar.style.display=p.export!==false?"flex":"none";
+}
+
+function renderHMOverview(){
+  const tt=cache.users.filter(u=>u.role==="teacher").length;
+  let h="<div class='card'><div class='card-title'>Muhtasari wa Shule</div><div class='stat-grid'>";
+  h+="<div class='stat-box'><div class='stat-val'>"+cache.classes.length+"</div><div class='stat-lbl'>Madarasa</div></div>";
+  h+="<div class='stat-box'><div class='stat-val'>"+tt+"</div><div class='stat-lbl'>Walimu</div></div>";
+  h+="<div class='stat-box'><div class='stat-val'>"+cache.students.length+"</div><div class='stat-lbl'>Wanafunzi</div></div>";
+  let tr=0;cache.students.forEach(s=>cache.subjects.forEach(sub=>{if(getScore(s._id,sub.id)!=="")tr++}));
+  h+="<div class='stat-box'><div class='stat-val'>"+tr+"</div><div class='stat-lbl'>Matokeo</div></div>";
+  h+="</div></div><div class='class-grid'>";
+  cache.classes.forEach(cls=>{
+    const cs=cache.students.filter(s=>s.classId===cls.id);
+    const tc=cache.users.find(u=>u.role==="teacher"&&u.classId===cls.id);
+    h+="<div class='class-card' onclick='drillHMClass(\""+esc(cls.id)+"\")'>"; 
+    h+="<h3>"+esc(cls.name)+"</h3><p>"+(tc?esc(tc.name):"Hana mwalimu")+"</p>";
+    h+="<div class='cc-stats'><div class='cc-stat'><div class='cc-stat-val'>"+cs.length+"</div><div class='cc-stat-lbl'>Wanafunzi</div></div></div></div>";
+  });
+  G("hm-overview-content").innerHTML=h+"</div>";
+}
+
+function drillHMClass(cid){
+  const cls=cache.classes.find(c=>c.id===cid);if(!cls)return;
+  const cs=cache.students.filter(s=>s.classId===cid);
+  let h="<button class='back-btn' onclick='renderHMClasses()'>&#8592; Rudi</button>";
+  h+="<div class='card'><div style='font-weight:700;font-size:18px'>"+esc(cls.name)+"</div></div>";
+  if(!cs.length){h+="<div class='card'><p class='empty'>Hakuna wanafunzi.</p></div>";}
+  else{cache.subjects.forEach(sub=>{const ent=cs.map(s=>({name:s.name,score:getScore(s._id,sub.id)})).filter(x=>x.score!=="");h+=ent.length?buildCard(sub,ent,cs.length):"<div class='card'><p style='color:#475569;font-size:13px'>"+esc(sub.name)+" — Hakuna matokeo.</p></div>"});}
+  G("hm-classes-content").innerHTML=h;
+  HM_PAGES.forEach(p=>{const e=G("page-"+p);if(e){e.classList.remove("active");e.style.display="none"}});
+  G("page-hm-classes").classList.add("active");G("page-hm-classes").style.display="block";
+}
+
+function renderHMClasses(){
+  let h="";
+  cache.classes.forEach(cls=>{
+    const cs=cache.students.filter(s=>s.classId===cls.id);
+    const tc=cache.users.find(u=>u.role==="teacher"&&u.classId===cls.id);
+    h+="<div class='card' style='cursor:pointer' onclick='drillHMClass(\""+esc(cls.id)+"\")'><div style='display:flex;justify-content:space-between;align-items:center'><div><div style='font-weight:700;font-size:16px'>"+esc(cls.name)+"</div><div style='font-size:12px;color:#64748b'>Mwalimu: "+(tc?esc(tc.name):"—")+"</div></div><div style='text-align:right'><div style='font-size:20px;font-weight:700;color:#a5b4fc'>"+cs.length+"</div><div style='font-size:11px;color:#475569'>wanafunzi</div></div></div></div>";
+  });
+  G("hm-classes-content").innerHTML=h||"<p class='empty'>Hakuna madarasa.</p>";
+}
+
+function renderHMReport(){
+  let h="";
+  cache.classes.forEach(cls=>{
+    const cs=cache.students.filter(s=>s.classId===cls.id);
+    h+="<div style='font-weight:700;font-size:15px;padding:4px 0 10px;border-bottom:1px solid #1e293b;margin-bottom:12px'>"+esc(cls.name)+"</div>";
+    if(!cs.length){h+="<div class='card'><p class='empty'>Hakuna wanafunzi.</p></div>";return}
+    cache.subjects.forEach(sub=>{const ent=cs.map(s=>({name:s.name,score:getScore(s._id,sub.id)})).filter(x=>x.score!=="");h+=ent.length?buildCard(sub,ent,cs.length,cls.name):"<div class='card'><p style='color:#475569;font-size:13px'>"+esc(cls.name)+" - "+esc(sub.name)+" — Hakuna matokeo.</p></div>"});
+  });
+  G("hm-report-content").innerHTML=h;
+}
+
+function renderHMStudentsTab(){
+  const sel=G("hm-class-select");
+  if(sel)sel.innerHTML=cache.classes.map(c=>"<option value='"+esc(c.id)+"'>"+esc(c.name)+"</option>").join("");
+  renderHMStudents();
+}
+function renderHMStudents(){
+  const cid=G("hm-class-select")&&G("hm-class-select").value;if(!cid)return;
+  const studs=cache.students.filter(s=>s.classId===cid);
+  G("hm-student-list").innerHTML=studs.length
+    ?studs.map(s=>"<div class='row'><span class='name'>"+esc(s.name)+"</span>"+
+      "<button class='btn btn-sm btn-danger' onclick='removeStudent(\""+esc(s._id)+"\",\"admin\")'>Ondoa</button></div>").join("")
+    :"<p class='empty' style='padding:10px 0'>Hakuna wanafunzi.</p>";
+}
+async function addHMStudent(){
+  const inp=G("hm-new-student"),n=inp.value.trim();if(!n)return;
+  const cid=G("hm-class-select").value;
+  if(cache.students.find(s=>s.classId===cid&&s.name.toLowerCase()===n.toLowerCase())){toast("Tayari yupo","red");return}
+  const id="s"+Date.now();
+  cache.students.push({_id:id,name:n,classId:cid});
+  if(fbReady)await fsSet("gx_students",id,{name:n,classId:cid});else saveLocalCache();
+  inp.value="";renderHMStudents();toast("&#10003; "+esc(n));
+}
+
+function renderHMTeachersTab(){
+  const sel=G("hm-new-teacher-class");
+  if(sel)sel.innerHTML=cache.classes.map(c=>"<option value='"+esc(c.id)+"'>"+esc(c.name)+"</option>").join("");
+  const ts=cache.users.filter(u=>u.role==="teacher");
+  G("hm-teachers-list").innerHTML=ts.length?ts.map(t=>{
+    const cls=cache.classes.find(c=>c.id===t.classId);
+    const sub=t.subjectId?cache.subjects.find(s=>s.id===t.subjectId):null;
+    return"<div class='teacher-pill'><div class='tp-info'><div class='tp-name'>"+esc(t.name)+"</div><div class='tp-class'>@"+esc(t.username)+" &middot; "+(cls?esc(cls.name):"—")+" &middot; <span style='color:#a5b4fc'>"+(sub?esc(sub.name):"—")+"</span></div></div></div>";
+  }).join(""):"<p class='empty'>Hakuna walimu.</p>";
+}
+async function addHMTeacher(){
+  const n=G("hm-new-teacher-name").value.trim(),u=G("hm-new-teacher-user").value.trim().toLowerCase(),p=G("hm-new-teacher-pass").value,c=G("hm-new-teacher-class").value,st=G("hm-new-teacher-subject").value.trim();
+  if(!n||!u||!p||!st){toast("Jaza sehemu zote","red");return}
+  if(cache.users.find(x=>x.username.toLowerCase()===u)){toast("Username tayari ipo","red");return}
+  let existingSub=cache.subjects.find(s=>s.name.toLowerCase()===st.toLowerCase());
+  let sid=existingSub?existingSub.id:"sub"+Date.now();
+  if(!existingSub){cache.subjects.push({id:sid,name:st,passmark:41});if(fbReady)await db.collection("gx_config").doc("main").update({subjects:cache.subjects});}
+  const id="t"+Date.now(),td={username:u,password:hashPass(p),role:"teacher",name:n,classId:c,subjectId:sid};
+  cache.users.push({_id:id,...td});
+  if(fbReady)await fsSet("gx_users",id,td);else saveLocalCache();
+  G("hm-new-teacher-name").value="";G("hm-new-teacher-user").value="";G("hm-new-teacher-pass").value="";G("hm-new-teacher-subject").value="";
+  renderHMTeachersTab();toast("&#10003; "+esc(n));
+}
+
+function renderHMEnter(){
+  const cs=G("hm-enter-class"),ss=G("hm-enter-subject");
+  if(!cs||!ss)return;
+  cs.innerHTML=cache.classes.map(c=>"<option value='"+esc(c.id)+"'>"+esc(c.name)+"</option>").join("");
+  ss.innerHTML=cache.subjects.map(s=>"<option value='"+esc(s.id)+"'>"+esc(s.name)+"</option>").join("");
+  renderHMScores();
+}
+function renderHMScores(){
+  const cid=G("hm-enter-class")&&G("hm-enter-class").value,sid=G("hm-enter-subject")&&G("hm-enter-subject").value;
+  if(!cid||!sid)return;
+  const sub=cache.subjects.find(s=>s.id===sid);
+  G("hm-passmark-label").textContent=sub?"Kufaulu: "+sub.passmark:"";
+  const studs=cache.students.filter(s=>s.classId===cid);
+  const list=G("hm-score-list");
+  if(!studs.length){list.innerHTML="<p class='empty'>Hakuna wanafunzi.</p>";return}
+  list.innerHTML=studs.map(st=>{const sc=getScore(st._id,sid),g=sc!==""?getGrade(Number(sc)):null;return scoreRow(st,sid,sc,g)}).join("");
+}
+
+async function addHeadmaster(){
+  const n=G("new-hm-name").value.trim(),u=G("new-hm-user").value.trim().toLowerCase(),p=G("new-hm-pass").value;
+  if(!n||!u||!p){toast("Jaza sehemu zote","red");return}
+  if(cache.users.find(x=>x.username.toLowerCase()===u)){toast("Username tayari ipo","red");return}
+  const perms={viewAll:G("perm-view-all").checked,report:G("perm-report").checked,addStudents:G("perm-add-students").checked,addTeachers:G("perm-add-teachers").checked,export:G("perm-export").checked,enterResults:G("perm-enter-results").checked};
+  const id="hm"+Date.now(),hmd={username:u,password:hashPass(p),role:"headmaster",name:n,permissions:perms};
+  cache.users.push({_id:id,...hmd});
+  if(fbReady)await fsSet("gx_users",id,hmd);else saveLocalCache();
+  G("new-hm-name").value="";G("new-hm-user").value="";G("new-hm-pass").value="";
+  renderTeachers();toast("&#10003; "+esc(n)+" ameongezwa kama Mkuu");
+}
+
+// ══ EXCEL IMPORT/EXPORT ══
+let excelPreviewData = null;
+
+function importExcel(input, caller) {
+  const file = input.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const data = new Uint8Array(e.target.result);
+      const wb = XLSX.read(data, {type:'array'});
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(ws, {header:1, defval:''});
+      if(rows.length < 2) { toast('File haina data ya kutosha','red'); return; }
+      
+      const headers = rows[0].map(h => String(h).trim());
+      const dataRows = rows.slice(1).filter(r => r[0]);
+      
+      // headers[0] = Jina, headers[1..] = masomo
+      const subjectHeaders = headers.slice(1);
+      
+      excelPreviewData = {
+        caller,
+        headers,
+        subjectHeaders,
+        rows: dataRows,
+        classId: caller === 'admin' ? (G('a-analysis-class')&&G('a-analysis-class').value) : (CU&&CU.classId)
+      };
+      
+      const infoEl = G(caller==='admin'?'a-excel-info':'t-excel-info');
+      const previewEl = G(caller==='admin'?'a-excel-preview':'t-excel-preview');
+      
+      infoEl.textContent = `Wanafunzi: ${dataRows.length} | Masomo: ${subjectHeaders.join(', ')} | Safu: ${headers.join(', ')}`;
+      previewEl.style.display = 'block';
+      
+      toast('File imesomwa — thibitisha import','green');
+    } catch(err) {
+      toast('Hitilafu ya kusoma Excel: '+err.message,'red');
+    }
+  };
+  reader.readAsArrayBuffer(file);
+  input.value = '';
+}
+
+async function confirmExcelImport(caller) {
+  if(!excelPreviewData) return;
+  const {subjectHeaders, rows, classId} = excelPreviewData;
+  
+  let imported = 0, skipped = 0;
+  
+  for(const row of rows) {
+    const name = String(row[0]).trim();
+    if(!name) continue;
+    
+    // Find or create student
+    let student = cache.students.find(s => s.classId === classId && s.name.toLowerCase() === name.toLowerCase());
+    if(!student) {
+      const sid = 's' + Date.now() + Math.random().toString(36).slice(2,6);
+      student = {_id: sid, name, classId};
+      cache.students.push(student);
+      if(fbReady) await fsSet('gx_students', sid, {name, classId});
+    }
+    
+    // Save scores for each subject
+    for(let i = 0; i < subjectHeaders.length; i++) {
+      const subName = subjectHeaders[i].toLowerCase().trim();
+      const score = row[i+1];
+      if(score === '' || score === null || score === undefined) continue;
+      const numScore = Number(score);
+      if(isNaN(numScore)) continue;
+      
+      // Find matching subject by name (fuzzy match)
+      const sub = cache.subjects.find(s => 
+        s.name.toLowerCase().includes(subName) || 
+        subName.includes(s.name.toLowerCase())
+      );
+      if(!sub) { skipped++; continue; }
+      
+      await saveScore(student._id, sub.id, numScore);
+      imported++;
+    }
+  }
+  
+  // Hide preview
+  G(caller==='admin'?'a-excel-preview':'t-excel-preview').style.display = 'none';
+  excelPreviewData = null;
+  
+  // Refresh
+  if(caller === 'admin') { renderAdminAnalysis(); renderAdminStudents(); }
+  else { renderTeacherScores(); renderTeacherStudents(); }
+  
+  toast(`✓ Imeingizwa! Matokeo: ${imported}${skipped?' | Masomo hayapatikani: '+skipped:''}`, 'green');
+}
+
+function cancelExcelImport(caller) {
+  excelPreviewData = null;
+  G(caller==='admin'?'a-excel-preview':'t-excel-preview').style.display = 'none';
+  toast('Import imeghairiwa');
+}
+
+function exportExcel(caller) {
+  let studs, label;
+  if(caller === 'admin') {
+    const cid = G('a-analysis-class')&&G('a-analysis-class').value;
+    const cls = cache.classes.find(c=>c.id===cid);
+    studs = cache.students.filter(s=>s.classId===cid);
+    label = cls ? cls.name : 'Darasa';
+  } else {
+    studs = getTStu();
+    const cls = cache.classes.find(c=>c.id===CU.classId);
+    label = cls ? cls.name : 'Darasa';
+  }
+  
+  if(!studs.length) { toast('Hakuna wanafunzi','red'); return; }
+  
+  // Build data
+  const headers = ['Jina', ...cache.subjects.map(s=>s.name), 'Wastani', 'Daraja'];
+  const data = [headers];
+  
+  studs.forEach(st => {
+    const scores = cache.subjects.map(sub => {
+      const sc = getScore(st._id, sub.id);
+      return sc !== '' ? Number(sc) : '';
+    });
+    const validScores = scores.filter(s => s !== '');
+    const avg = validScores.length ? (validScores.reduce((a,b)=>a+b,0)/validScores.length).toFixed(1) : '';
+    const overallGrade = avg !== '' ? getGrade(Number(avg)).label : '';
+    data.push([st.name, ...scores, avg, overallGrade]);
+  });
+  
+  // Add summary rows
+  data.push([]);
+  data.push(['MUHTASARI']);
+  cache.subjects.forEach(sub => {
+    const entries = studs.map(s=>getScore(s._id,sub.id)).filter(v=>v!=='');
+    if(!entries.length) return;
+    const nums = entries.map(Number);
+    const avg = (nums.reduce((a,b)=>a+b,0)/nums.length).toFixed(1);
+    const pass = nums.filter(s=>s>=sub.passmark).length;
+    data.push([sub.name, `Wastani: ${avg}`, `Waliofaulu: ${pass}/${entries.length}`, `Kiwango: ${Math.round(pass/entries.length*100)}%`]);
+  });
+  
+  const ws = XLSX.utils.aoa_to_sheet(data);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, label.slice(0,31));
+  XLSX.writeFile(wb, `galaxy-${label.replace(/ /g,'-')}-${new Date().toLocaleDateString('en-GB').replace(/\//g,'-')}.xlsx`);
+  toast('✓ Excel imepakuliwa!');
+}
+
+
+
+// ══ PROFILE MODAL ══
+function openProfile(){
+  if(!CU) return;
+  const cls  = cache.classes.find(c=>c.id===CU.classId);
+  const sub  = CU.subjectId ? cache.subjects.find(s=>s.id===CU.subjectId) : null;
+  const role = CU.role==="admin"?"admin":CU.role==="headmaster"?"headmaster":"teacher";
+  const roleLabel = role==="admin"?"Msimamizi":role==="headmaster"?"Mkuu wa Shule":"Mwalimu";
+  const initial = (CU.name||CU.username||"?").charAt(0).toUpperCase();
+  const perms = CU.permissions||{};
+
+  // Count stats
+  let myStudents=0, myResults=0;
+  if(role==="teacher"&&CU.classId){
+    const ss=cache.students.filter(s=>s.classId===CU.classId);
+    myStudents=ss.length;
+    if(CU.subjectId) myResults=ss.filter(s=>getScore(s._id,CU.subjectId)!=="").length;
+  } else if(role==="admin"||role==="headmaster"){
+    myStudents=cache.students.length;
+    let t=0;cache.students.forEach(s=>cache.subjects.forEach(sub=>{if(getScore(s._id,sub.id)!=="")t++}));
+    myResults=t;
+  }
+
+  let h="";
+  h+="<div style='text-align:center;margin-bottom:16px'>";
+  h+="<div class='profile-avatar'>"+esc(initial)+"</div>";
+  h+="<div style='font-size:18px;font-weight:800;color:#e2e8f0;margin-bottom:4px'>"+esc(CU.name||CU.username)+"</div>";
+  h+="<span class='profile-role-badge role-"+role+"'>"+roleLabel+"</span>";
+  h+="</div>";
+
+  h+="<div style='background:#0a0f1e;border-radius:10px;padding:4px 12px;margin-bottom:14px'>";
+  h+="<div class='profile-field'><span class='pf-label'>Username</span><span class='pf-val'>@"+esc(CU.username||"—")+"</span></div>";
+  if(role==="teacher"||role==="headmaster"){
+    if(cls) h+="<div class='profile-field'><span class='pf-label'>Darasa</span><span class='pf-val'>"+esc(cls.name)+"</span></div>";
+    if(sub) h+="<div class='profile-field'><span class='pf-label'>Somo</span><span class='pf-val'>"+esc(sub.name)+"</span></div>";
+  }
+  if(role==="headmaster"&&Object.keys(perms).length){
+    const permLabels={viewAll:"Madarasa Yote",report:"Ripoti",addStudents:"Ongeza Wanafunzi",addTeachers:"Ongeza Walimu",export:"Export",enterResults:"Ingiza Matokeo"};
+    const activePerms=Object.entries(perms).filter(([,v])=>v).map(([k])=>permLabels[k]||k);
+    if(activePerms.length) h+="<div class='profile-field'><span class='pf-label'>Ruhusa</span><span class='pf-val' style='font-size:11px'>"+activePerms.join(", ")+"</span></div>";
+  }
+  h+="</div>";
+
+  h+="<div class='stat-grid' style='margin-bottom:14px'>";
+  h+="<div class='stat-box'><div class='stat-val'>"+myStudents+"</div><div class='stat-lbl'>Wanafunzi</div></div>";
+  h+="<div class='stat-box'><div class='stat-val'>"+myResults+"</div><div class='stat-lbl'>Matokeo</div></div>";
+  h+="</div>";
+
+  // Change password section
+  h+="<div style='background:#0a0f1e;border-radius:10px;padding:12px;margin-bottom:14px'>";
+  h+="<div style='font-size:11px;color:#64748b;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px'>Badilisha Nywila</div>";
+  h+="<input type='password' id='profile-new-pass' placeholder='Nywila mpya...' style='margin-bottom:8px' autocomplete='new-password'>";
+  h+="<input type='password' id='profile-confirm-pass' placeholder='Thibitisha nywila...' style='margin-bottom:10px'>";
+  h+="<button class='btn btn-full' onclick='profileChangePass()' style='margin-top:0'>Hifadhi Nywila</button>";
+  h+="</div>";
+
+  h+="<button class='btn btn-full' style='background:#7f1d1d;color:#fca5a5' onclick='doLogout();G(\'profile-modal\').classList.remove(\'open\')'>&#8594; Toka<\/button>";
+
+  G("profile-content").innerHTML=h;
+  G("profile-modal").classList.add("open");
+}
+
+async function profileChangePass(){
+  const p1=G("profile-new-pass").value, p2=G("profile-confirm-pass").value;
+  if(!p1){toast("Weka nywila mpya","red");return}
+  if(p1!==p2){toast("Nywila hazifanani","red");return}
+  if(p1.length<4){toast("Nywila ni fupi sana","red");return}
+  const hp=hashPass(p1);
+  const uid=CU._id||CU.id;
+  CU.password=hp;
+  const idx=cache.users.findIndex(u=>(u._id||u.id)===uid);
+  if(idx>-1) cache.users[idx].password=hp;
+  if(fbReady) await fsSet("gx_users",uid,{password:hp});
+  else saveLocalCache();
+  G("profile-new-pass").value=""; G("profile-confirm-pass").value="";
+  toast("&#10003; Nywila imebadilishwa","green");
+}
+
+// Update profile avatar button with user initial on login
+function updateProfileBtn(){
+  const btn=G("profile-avatar-btn");
+  if(!btn||!CU) return;
+  btn.textContent=(CU.name||CU.username||"?").charAt(0).toUpperCase();
+}
+
+// ══ SEARCH MODAL ══
+let _searchTab = "students";
+
+function openSearchModal(){
+  G("search-modal").classList.add("open");
+  const inp=G("modal-search-input");
+  if(inp){inp.value="";inp.focus();}
+  runModalSearch("");
+}
+function closeSearchModal(){
+  G("search-modal").classList.remove("open");
+}
+function switchSearchTab(tab){
+  _searchTab=tab;
+  document.querySelectorAll(".search-tab-btn").forEach(b=>b.classList.remove("active"));
+  G("search-tab-"+tab)&&G("search-tab-"+tab).classList.add("active");
+  runModalSearch(G("modal-search-input")?G("modal-search-input").value:"");
+}
+
+function runModalSearch(q){
+  const res=G("modal-search-results");
+  if(!res) return;
+  const query=(q||"").toLowerCase().trim();
+
+  if(_searchTab==="students"){
+    let pool=cache.students;
+    // Teachers only see their own class
+    if(CU&&CU.role==="teacher") pool=pool.filter(s=>s.classId===CU.classId);
+
+    const matches=query.length<1 ? pool.slice(0,30) : pool.filter(s=>s.name.toLowerCase().includes(query)).slice(0,30);
+
+    if(!matches.length){
+      res.innerHTML="<div class='empty-search'>&#128269; Mwanafunzi hakupatikana</div>"; return;
+    }
+    res.innerHTML=matches.map(s=>{
+      const cls=cache.classes.find(c=>c.id===s.classId);
+      const scores=cache.subjects.map(sub=>{
+        const sc=getScore(s._id,sub.id);
+        if(sc==="") return null;
+        const g=getGrade(Number(sc));
+        return "<span class='smi-chip' style='background:"+g.color+"20;color:"+g.color+";border-color:"+g.color+"40'>"+esc(sub.name)+": "+sc+" ("+g.label+")</span>";
+      }).filter(Boolean);
+      const avg=scores.length?(()=>{const ns=cache.subjects.map(sub=>getScore(s._id,sub.id)).filter(v=>v!=="").map(Number);return ns.length?(ns.reduce((a,b)=>a+b,0)/ns.length).toFixed(1):"—";})():"—";
+
+      return "<div class='search-modal-item' onclick='openStudentFromSearch(\""+esc(s._id)+"\")'>"+
+        "<div style='display:flex;justify-content:space-between;align-items:flex-start'>"+
+        "<div><div class='smi-name'>"+esc(s.name)+"</div>"+
+        "<div class='smi-sub'>"+(cls?esc(cls.name):"—")+"</div></div>"+
+        "<div style='text-align:right'><div style='font-size:18px;font-weight:800;color:#a5b4fc'>"+avg+"</div><div style='font-size:10px;color:#475569'>Wastani</div></div></div>"+
+        (scores.length?"<div class='smi-scores'>"+scores.join("")+"</div>":"<div style='font-size:11px;color:#475569;margin-top:4px'>Hakuna matokeo bado</div>")+
+        "</div>";
+    }).join("");
+  } else {
+    // Teachers tab (admin only sees this fully)
+    const pool=cache.users.filter(u=>u.role==="teacher"||u.role==="headmaster");
+    const matches=query.length<1 ? pool.slice(0,30) : pool.filter(t=>(t.name||"").toLowerCase().includes(query)||(t.username||"").toLowerCase().includes(query)).slice(0,30);
+
+    if(!matches.length){
+      res.innerHTML="<div class='empty-search'>&#127979; Mwalimu hakupatikana</div>"; return;
+    }
+    res.innerHTML=matches.map(t=>{
+      const cls=cache.classes.find(c=>c.id===t.classId);
+      const sub=t.subjectId?cache.subjects.find(s=>s.id===t.subjectId):null;
+      const roleLabel=t.role==="headmaster"?"Mkuu wa Shule":"Mwalimu";
+      const roleColor=t.role==="headmaster"?"#f59e0b":"#6366f1";
+      // Count their students & results
+      const studs=cls?cache.students.filter(s=>s.classId===t.classId):[];
+      let filled=0;
+      if(sub) studs.forEach(s=>{if(getScore(s._id,t.subjectId)!=="")filled++;});
+
+      return "<div class='search-modal-item' onclick=\"closeSearchModal();openTeacherDetail('"+esc(t._id||t.id)+"')\">"+
+        "<div style='display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px'>"+
+        "<div><div class='smi-name'>"+esc(t.name)+"</div>"+
+        "<div class='smi-sub'>@"+esc(t.username)+"</div></div>"+
+        "<span class='teacher-badge' style='background:"+roleColor+"20;color:"+roleColor+";border-color:"+roleColor+"40'>"+roleLabel+"</span>"+
+        "</div>"+
+        "<div style='display:flex;gap:8px;flex-wrap:wrap'>"+
+        (cls?"<span class='smi-chip' style='background:#1e293b;color:#94a3b8;border-color:#334155'>&#127979; "+esc(cls.name)+"</span>":"")+
+        (sub?"<span class='smi-chip' style='background:#1e293b;color:#94a3b8;border-color:#334155'>&#128218; "+esc(sub.name)+"</span>":"")+
+        (cls?"<span class='smi-chip' style='background:#1e293b;color:#94a3b8;border-color:#334155'>&#128101; "+studs.length+" wanafunzi</span>":"")+
+        (sub&&cls?"<span class='smi-chip' style='background:#22c55e20;color:#86efac;border-color:#22c55e40'>&#10003; "+filled+"/"+studs.length+" matokeo</span>":"")+
+        "</div>"+
+        "</div>";
+    }).join("");
+  }
+}
+
+function openStudentFromSearch(sid){
+  closeSearchModal();
+  showStudentDetail(sid);
+}
+
+
+// ══════════════════════════════════════════════════
+// SELF-REGISTRATION SYSTEM
+// ══════════════════════════════════════════════════
+
+// ── Screen switchers ──
+function showRegister(){
+  G("screen-login").style.display="none";
+  G("screen-register").classList.add("active");
+  // Populate class select in register form
+  const sel=G("reg-class");
+  if(sel) sel.innerHTML=cache.classes.map(c=>"<option value='"+esc(c.id)+"'>"+esc(c.name)+"</option>").join("");
+  // Reset to step 1
+  regGoToStep(1);
+  G("reg-err").style.display="none";
+}
+function showLogin(){
+  G("screen-register").classList.remove("active");
+  G("screen-login").style.display="flex";
+}
+
+// ── Step navigation ──
+function regGoToStep(n){
+  [1,2,3,'success'].forEach(s=>{
+    const el=G("reg-step-"+(s==='success'?'success':s));
+    if(el) el.style.display="none";
+  });
+  const target=G(n==='success'?"reg-step-success":"reg-step-"+n);
+  if(target) target.style.display="block";
+  // Update step bar
+  [1,2,3].forEach(i=>{
+    const dot=G("step-"+i);
+    if(!dot)return;
+    dot.className="step-dot"+(i<n?" done":i===n?" active":"");
+  });
+}
+function regGoBack(toStep){ regGoToStep(toStep); }
+
+// ── Subject suggestions for register ──
+function showRegSubjectSuggestions(val){
+  const box=G("reg-subject-suggestions");
+  if(!box)return;
+  const filtered=val.length>0
+    ?cache.subjects.filter(s=>s.name.toLowerCase().includes(val.toLowerCase()))
+    :cache.subjects;
+  box.innerHTML=filtered.map(s=>
+    "<span onclick='G(\"reg-subject\").value=\""+esc(s.name)+"\";G(\"reg-subject-suggestions\").innerHTML=\"\"' "+
+    "style='display:inline-block;background:#6366f120;color:#a5b4fc;border:1px solid #6366f140;border-radius:20px;padding:3px 12px;font-size:12px;cursor:pointer'>"+
+    esc(s.name)+"</span>"
+  ).join("");
+}
+
+// ── Validation helpers ──
+function regShowErr(msg){
+  const e=G("reg-err");
+  e.textContent=msg;
+  e.style.display="block";
+}
+function regClearErr(){ G("reg-err").style.display="none"; }
+
+// ── Step 1: Account info validation ──
+function regStep1(){
+  regClearErr();
+  const name=G("reg-name").value.trim();
+  const user=G("reg-username").value.trim().toLowerCase();
+  const pass=G("reg-pass").value;
+  const pass2=G("reg-pass2").value;
+
+  if(!name)        return regShowErr("Weka jina lako kamili");
+  if(!user)        return regShowErr("Weka username");
+  if(user.length<3)return regShowErr("Username ni fupi sana — angalau herufi 3");
+  if(/\s/.test(user)) return regShowErr("Username haipaswi kuwa na nafasi");
+  if(!pass)        return regShowErr("Weka nywila");
+  if(pass.length<6)return regShowErr("Nywila lazima iwe angalau herufi 6");
+  if(pass!==pass2) return regShowErr("Nywila hazifanani");
+
+  // Check if username already exists
+  const exists=cache.users.find(u=>u.username&&u.username.toLowerCase()===user);
+  if(exists) return regShowErr("Username '"+user+"' tayari ipo — chagua nyingine");
+
+  // Also check pending list
+  if(cache.pendingUsers&&cache.pendingUsers.find(u=>u.username===user)){
+    return regShowErr("Username '"+user+"' tayari ipo katika maombi — chagua nyingine");
+  }
+
+  regGoToStep(2);
+}
+
+// ── Step 2: Class & Subject validation ──
+function regStep2(){
+  regClearErr();
+  const classId=G("reg-class").value;
+  const subject=G("reg-subject").value.trim();
+  if(!classId) return regShowErr("Chagua darasa lako");
+  if(!subject) return regShowErr("Weka somo unalofundisha");
+  // Build summary for step 3
+  buildRegSummary();
+  regGoToStep(3);
+}
+
+// ── Build confirmation summary ──
+function buildRegSummary(){
+  const name    = G("reg-name").value.trim();
+  const user    = G("reg-username").value.trim();
+  const classId = G("reg-class").value;
+  const subject = G("reg-subject").value.trim();
+  const cls     = cache.classes.find(c=>c.id===classId);
+  G("reg-summary").innerHTML=
+    "<div class='profile-field'><span class='pf-label'>Jina</span><span class='pf-val'>"+esc(name)+"</span></div>"+
+    "<div class='profile-field'><span class='pf-label'>Username</span><span class='pf-val'>@"+esc(user)+"</span></div>"+
+    "<div class='profile-field'><span class='pf-label'>Darasa</span><span class='pf-val'>"+(cls?esc(cls.name):"—")+"</span></div>"+
+    "<div class='profile-field'><span class='pf-label'>Somo</span><span class='pf-val'>"+esc(subject)+"</span></div>"+
+    "<div style='margin-top:10px;padding:8px;background:#6366f110;border-radius:8px;font-size:11px;color:#64748b;text-align:center'>"+
+    "&#9432; Ombi lako litaenda kwa admin kwa ukaguzi</div>";
+}
+
+// ── Submit registration to Firestore ──
+async function submitRegistration(){
+  regClearErr();
+  const name    = G("reg-name").value.trim();
+  const user    = G("reg-username").value.trim().toLowerCase();
+  const pass    = G("reg-pass").value;
+  const classId = G("reg-class").value;
+  const subjectText = G("reg-subject").value.trim();
+
+  const btn=G("reg-step-3").querySelector(".btn");
+  btn.disabled=true; btn.textContent="Inatuma...";
+
+  try{
+    // Find or create subject
+    let subjectId;
+    const existingSub=cache.subjects.find(s=>s.name.toLowerCase()===subjectText.toLowerCase());
+    if(existingSub){
+      subjectId=existingSub.id;
+    } else {
+      subjectId="sub"+Date.now();
+    }
+
+    const pendingData={
+      name,
+      username: user,
+      password: hashPass(pass),
+      role:     "teacher",
+      classId,
+      subjectId,
+      subjectName: subjectText, // store name for display before subject is created
+      status:   "pending",
+      createdAt: new Date().toISOString(),
+      requestedAt: Date.now()
+    };
+
+    const pid="pending_"+Date.now();
+    if(fbReady){
+      await db.collection("gx_pending").doc(pid).set(pendingData);
+    } else {
+      // localStorage fallback
+      const pending=JSON.parse(localStorage.getItem("gx_pending")||"[]");
+      pending.push({_id:pid,...pendingData});
+      localStorage.setItem("gx_pending",JSON.stringify(pending));
+    }
+
+    regGoToStep('success');
+  } catch(e){
+    regShowErr("Hitilafu: "+e.message);
+    btn.disabled=false; btn.textContent="&#10003; Tuma Ombi";
+  }
+}
+
+// ══════════════════════════════════════════════════
+// ADMIN — PENDING APPROVAL SYSTEM
+// ══════════════════════════════════════════════════
+
+async function loadPendingUsers(){
+  if(fbReady){
+    const snap=await db.collection("gx_pending").where("status","==","pending").get();
+    cache.pendingUsers=snap.docs.map(d=>({...d.data(),_id:d.id}));
+  } else {
+    const all=JSON.parse(localStorage.getItem("gx_pending")||"[]");
+    cache.pendingUsers=all.filter(u=>u.status==="pending");
+  }
+  updatePendingBadge();
+  renderPendingList();
+  renderTeacherActivity();
+}
+
+function updatePendingBadge(){
+  const count=(cache.pendingUsers||[]).length;
+  // Header bell
+  const wrap=G("notif-wrap"), badge=G("notif-count");
+  if(wrap) wrap.style.display=count>0?"inline-flex":"inline-flex"; // always show for admin
+  if(badge){badge.textContent=count>9?"9+":count;badge.style.display=count>0?"flex":"none";}
+  // Inline section
+  const sec=G("pending-section");
+  if(sec) sec.style.display=count>0?"block":"none";
+  const pb=G("pending-count-badge");
+  if(pb) pb.textContent=count;
+}
+
+function openPendingModal(){
+  renderPendingList();
+  G("pending-modal").classList.add("open");
+}
+
+function renderPendingList(){
+  const list=G("pending-list");
+  const inlineList=G("pending-inline-list");
+  const pending=(cache.pendingUsers||[]);
+
+  if(!pending.length){
+    if(list) list.innerHTML="<div class='empty-state' style='padding:24px;text-align:center;color:#475569'>&#10003; Hakuna maombi yanayosubiri</div>";
+    if(inlineList) inlineList.innerHTML="<p class='empty'>Hakuna maombi.</p>";
+    return;
+  }
+
+  const html=pending.map(p=>{
+    const cls=cache.classes.find(c=>c.id===p.classId);
+    const date=p.createdAt?new Date(p.createdAt).toLocaleDateString("sw-TZ"):"—";
+    return "<div class='approval-card'>"+
+      "<div class='ac-name'>"+esc(p.name)+"</div>"+
+      "<div class='ac-meta'>@"+esc(p.username)+" &middot; "+(cls?esc(cls.name):"Darasa?")+" &middot; "+esc(p.subjectName||p.subjectId||"Somo?")+" &middot; "+date+"</div>"+
+      "<div class='ac-actions'>"+
+      "<button class='btn btn-sm' style='background:#15803d;flex:1' onclick='approveTeacher(\""+esc(p._id)+"\")'>&#10003; Kubali<\/button>"+
+      "<button class='btn btn-sm btn-danger' style='flex:1' onclick='rejectTeacher(\""+esc(p._id)+"\")'>&#10005; Kataa<\/button>"+
+      "</div></div>";
+  }).join("");
+
+  if(list) list.innerHTML=html;
+  if(inlineList) inlineList.innerHTML=html;
+}
+
+async function approveTeacher(pendingId){
+  const p=(cache.pendingUsers||[]).find(u=>u._id===pendingId);
+  if(!p) return;
+
+  // Find or create subject
+  let subjectId=p.subjectId;
+  const existingSub=cache.subjects.find(s=>s.name&&p.subjectName&&s.name.toLowerCase()===p.subjectName.toLowerCase());
+  if(existingSub){
+    subjectId=existingSub.id;
+  } else if(p.subjectName){
+    subjectId="sub"+Date.now();
+    cache.subjects.push({id:subjectId,name:p.subjectName,passmark:41});
+    if(fbReady) await db.collection("gx_config").doc("main").update({subjects:cache.subjects});
+    else saveLocalCache();
+  }
+
+  const teacherId="t"+Date.now();
+  const teacherData={
+    name:      p.name,
+    username:  p.username,
+    password:  p.password,
+    role:      "teacher",
+    classId:   p.classId,
+    subjectId: subjectId,
+    approvedAt: new Date().toISOString(),
+    lastLogin:  null,
+    loginCount: 0
+  };
+
+  cache.users.push({_id:teacherId,...teacherData});
+
+  if(fbReady){
+    await fsSet("gx_users",teacherId,teacherData);
+    await db.collection("gx_pending").doc(pendingId).update({status:"approved"});
+  } else {
+    saveLocalCache();
+    const plist=JSON.parse(localStorage.getItem("gx_pending")||"[]");
+    const idx=plist.findIndex(u=>u._id===pendingId);
+    if(idx>-1){plist[idx].status="approved";localStorage.setItem("gx_pending",JSON.stringify(plist));}
+  }
+
+  // Remove from cache
+  cache.pendingUsers=(cache.pendingUsers||[]).filter(u=>u._id!==pendingId);
+  updatePendingBadge();
+  renderPendingList();
+  renderTeachers();
+  renderTeacherActivity();
+  G("pending-modal").classList.remove("open");
+  toast("&#10003; "+esc(p.name)+" amekubaliwa — akaunti imeundwa","green");
+}
+
+async function rejectTeacher(pendingId){
+  const p=(cache.pendingUsers||[]).find(u=>u._id===pendingId);
+  if(!p) return;
+  if(!confirm("Kataa ombi la "+p.name+"?")) return;
+
+  if(fbReady){
+    await db.collection("gx_pending").doc(pendingId).update({status:"rejected"});
+  } else {
+    const plist=JSON.parse(localStorage.getItem("gx_pending")||"[]");
+    const idx=plist.findIndex(u=>u._id===pendingId);
+    if(idx>-1){plist[idx].status="rejected";localStorage.setItem("gx_pending",JSON.stringify(plist));}
+  }
+
+  cache.pendingUsers=(cache.pendingUsers||[]).filter(u=>u._id!==pendingId);
+  updatePendingBadge();
+  renderPendingList();
+  toast(esc(p.name)+" — ombi limekataliwa");
+}
+
+// ══════════════════════════════════════════════════
+// TEACHER ACTIVITY DASHBOARD
+// ══════════════════════════════════════════════════
+
+function renderTeacherActivity(){
+  const el=G("teacher-activity-list");
+  if(!el) return;
+  const teachers=cache.users.filter(u=>u.role==="teacher"||u.role==="headmaster");
+  if(!teachers.length){el.innerHTML="<p class='empty'>Hakuna walimu bado.</p>";return;}
+
+  el.innerHTML=teachers.map(t=>{
+    const cls    = cache.classes.find(c=>c.id===t.classId);
+    const sub    = t.subjectId?cache.subjects.find(s=>s.id===t.subjectId):null;
+    const studs  = cls?cache.students.filter(s=>s.classId===t.classId):[];
+    const filled = sub?studs.filter(s=>getScore(s._id,t.subjectId)!=="").length:0;
+    const pct    = studs.length?Math.round(filled/studs.length*100):0;
+
+    // Last login display
+    const lastLogin=t.lastLogin
+      ?(() => {
+          const d=new Date(t.lastLogin);
+          const now=new Date();
+          const diff=Math.floor((now-d)/1000/60); // minutes
+          if(diff<1) return '<span class="online-dot"></span>Sasa hivi';
+          if(diff<60) return 'Dakika '+diff+' zilizopita';
+          if(diff<1440) return 'Masaa '+(Math.floor(diff/60))+' yaliyopita';
+          return d.toLocaleDateString("sw-TZ");
+        })()
+      :'Hajaingía bado';
+
+    const roleLabel=t.role==="headmaster"?"Mkuu wa Shule":"Mwalimu";
+    const roleColor=t.role==="headmaster"?"#f59e0b":"#6366f1";
+
+    return "<div class='ta-card' style='cursor:pointer' onclick='openTeacherDetail(\"" + esc(t._id||t.id) + "\")'>"+
+      "<div class='ta-header'>"+
+        "<div>"+
+          "<div class='ta-name'>"+esc(t.name)+"</div>"+
+          "<div class='ta-meta'>@"+esc(t.username||"—")+" &middot; "+
+          "<span style='color:"+roleColor+";font-weight:700'>"+roleLabel+"</span></div>"+
+          "<div class='ta-meta' style='margin-top:2px'>"+
+          (cls?"&#127979; "+esc(cls.name):" —")+(sub?" &middot; &#128218; "+esc(sub.name):"")+"</div>"+
+        "</div>"+
+        "<div style='text-align:right'>"+
+          "<div style='font-size:10px;color:#475569;margin-bottom:4px'>Mara ya mwisho</div>"+
+          "<div style='font-size:11px;color:#64748b'>"+lastLogin+"</div>"+
+        "</div>"+
+      "</div>"+
+      "<div class='ta-stats'>"+
+        "<div class='ta-stat'><div class='ta-stat-val'>"+studs.length+"</div><div class='ta-stat-lbl'>Wanafunzi</div></div>"+
+        "<div class='ta-stat'><div class='ta-stat-val'>"+filled+"</div><div class='ta-stat-lbl'>Alama</div></div>"+
+        "<div class='ta-stat'><div class='ta-stat-val' style='color:"+(pct>=80?"#22c55e":pct>=50?"#f59e0b":"#ef4444")+"'>"+pct+"%</div><div class='ta-stat-lbl'>Kiwango</div></div>"+
+        "<div class='ta-stat'><div class='ta-stat-val'>"+(t.loginCount||0)+"</div><div class='ta-stat-lbl'>Logins</div></div>"+
+      "</div>"+
+      "<div style='display:flex;justify-content:flex-end;gap:6px;margin-top:8px'>"+
+        "<button class='btn btn-sm' style='background:#1d4ed8' onclick='openEditTeacher(\""+esc(t._id||t.id)+"\")'>&#9998; Hariri<\/button>"+
+        "<button class='btn btn-sm btn-danger' onclick='removeTeacher(\""+esc(t._id||t.id)+"\")'>Futa<\/button>"+
+      "</div>"+
+    "</div>";
+  }).join("");
+}
+
+
+
+// ══════════════════════════════════════════════════
+// TEACHER DETAIL MODAL — Full profile view
+// ══════════════════════════════════════════════════
+
+function openTeacherDetail(tid){
+  const t = cache.users.find(u=>(u._id||u.id)===tid);
+  if(!t) return;
+
+  const cls      = cache.classes.find(c=>c.id===t.classId);
+  const sub      = t.subjectId ? cache.subjects.find(s=>s.id===t.subjectId) : null;
+  const studs    = cls ? cache.students.filter(s=>s.classId===t.classId) : [];
+  const filled   = sub ? studs.filter(s=>getScore(s._id,t.subjectId)!=="") : [];
+  const scores   = filled.map(s=>Number(getScore(s._id,t.subjectId)));
+  const avg      = scores.length ? (scores.reduce((a,b)=>a+b,0)/scores.length).toFixed(1) : "—";
+  const passmark = sub ? sub.passmark : 41;
+  const passed   = scores.filter(s=>s>=passmark).length;
+  const pct      = studs.length ? Math.round(filled.length/studs.length*100) : 0;
+  const initial  = (t.name||"?").charAt(0).toUpperCase();
+  const roleLabel= t.role==="headmaster"?"Mkuu wa Shule":"Mwalimu";
+  const roleColor= t.role==="headmaster"?"#f59e0b":"#6366f1";
+
+  // Last login
+  const lastLogin = t.lastLogin
+    ? (()=>{
+        const d=new Date(t.lastLogin);
+        const diff=Math.floor((new Date()-d)/60000);
+        if(diff<1) return '<span style="color:#22c55e">● Sasa hivi</span>';
+        if(diff<60) return 'Dakika '+diff+' zilizopita';
+        if(diff<1440) return 'Masaa '+Math.floor(diff/60)+' yaliyopita';
+        if(diff<10080) return 'Siku '+Math.floor(diff/1440)+' zilizopita';
+        return d.toLocaleDateString("sw-TZ");
+      })()
+    : '<span style="color:#475569">Hajaingía bado</span>';
+
+  // Approved date
+  const approvedDate = t.approvedAt
+    ? new Date(t.approvedAt).toLocaleDateString("sw-TZ")
+    : "—";
+
+  let h = "";
+
+  // ── Header ──
+  h += "<div class='td-header-card'>";
+  h += "<div class='td-avatar'>"+esc(initial)+"</div>";
+  h += "<div style='flex:1'>";
+  h += "<div class='td-name'>"+esc(t.name)+"</div>";
+  h += "<div class='td-role'>@"+esc(t.username||"—")+" &middot; <span style='color:"+roleColor+";font-weight:700'>"+roleLabel+"</span></div>";
+  h += "<div style='margin-top:6px;display:flex;gap:6px;flex-wrap:wrap'>";
+  if(cls) h += "<span style='background:#6366f120;color:#a5b4fc;border-radius:12px;padding:2px 8px;font-size:11px;font-weight:600'>&#127979; "+esc(cls.name)+"</span>";
+  if(sub) h += "<span style='background:#22c55e20;color:#86efac;border-radius:12px;padding:2px 8px;font-size:11px;font-weight:600'>&#128218; "+esc(sub.name)+"</span>";
+  h += "</div></div>";
+  h += "<button onclick=\"G('teacher-detail-modal').classList.remove('open')\" style='background:none;border:none;color:#475569;font-size:20px;cursor:pointer;align-self:flex-start'>&#10005;<\/button>";
+  h += "</div>";
+
+  // ── Stats ──
+  h += "<div class='td-section'>";
+  h += "<div class='td-section-title'>Takwimu</div>";
+  h += "<div class='td-stat-row'>";
+  h += "<div class='td-stat'><div class='td-stat-v'>"+studs.length+"</div><div class='td-stat-l'>Wanafunzi</div></div>";
+  h += "<div class='td-stat'><div class='td-stat-v'>"+filled.length+"</div><div class='td-stat-l'>Alama</div></div>";
+  h += "<div class='td-stat'><div class='td-stat-v' style='color:"+(pct>=80?"#22c55e":pct>=50?"#f59e0b":"#ef4444")+"'>"+pct+"%</div><div class='td-stat-l'>Kiwango</div></div>";
+  h += "<div class='td-stat'><div class='td-stat-v'>"+( t.loginCount||0)+"</div><div class='td-stat-l'>Logins</div></div>";
+  h += "</div>";
+  // Progress bar
+  if(studs.length){
+    const barColor = pct>=80?"#22c55e":pct>=50?"#f59e0b":"#ef4444";
+    h += "<div style='display:flex;align-items:center;gap:8px;margin-top:10px'>";
+    h += "<span style='font-size:11px;color:#475569;white-space:nowrap'>Maendeleo ya alama</span>";
+    h += "<div class='progress-bar-wrap'><div class='progress-bar-fill' style='width:"+pct+"%;background:"+barColor+"'></div></div>";
+    h += "<span style='font-size:11px;font-weight:700;color:"+barColor+"'>"+pct+"%</span>";
+    h += "</div>";
+  }
+  h += "</div>";
+
+  // ── Account info ──
+  h += "<div class='td-section'>";
+  h += "<div class='td-section-title'>Taarifa za Akaunti</div>";
+  h += "<div class='td-field'><span class='td-label'>Jina kamili</span><span class='td-val'>"+esc(t.name)+"</span></div>";
+  h += "<div class='td-field'><span class='td-label'>Username</span><span class='td-val'>@"+esc(t.username||"—")+"</span></div>";
+  h += "<div class='td-field'><span class='td-label'>Darasa</span><span class='td-val'>"+(cls?esc(cls.name):"—")+"</span></div>";
+  h += "<div class='td-field'><span class='td-label'>Somo</span><span class='td-val'>"+(sub?esc(sub.name):"—")+(sub?" (Kufaulu: "+sub.passmark+")":"")+"</span></div>";
+  h += "<div class='td-field'><span class='td-label'>Mara ya mwisho kuingia</span><span class='td-val'>"+lastLogin+"</span></div>";
+  h += "<div class='td-field'><span class='td-label'>Akaunti iliundwa</span><span class='td-val'>"+approvedDate+"</span></div>";
+  h += "</div>";
+
+  // ── Analysis summary if scores exist ──
+  if(scores.length){
+    const high   = Math.max(...scores);
+    const low    = Math.min(...scores);
+    const passRate = Math.round(passed/scores.length*100);
+    h += "<div class='td-section'>";
+    h += "<div class='td-section-title'>Uchambuzi wa "+esc(sub?sub.name:"Somo")+"</div>";
+    h += "<div class='td-field'><span class='td-label'>Wastani wa darasa</span><span class='td-val' style='color:#a5b4fc;font-size:16px'>"+avg+"</span></div>";
+    h += "<div class='td-field'><span class='td-label'>Alama ya juu</span><span class='td-val' style='color:#22c55e'>"+high+" ("+getGrade(high).label+")</span></div>";
+    h += "<div class='td-field'><span class='td-label'>Alama ya chini</span><span class='td-val' style='color:#ef4444'>"+low+" ("+getGrade(low).label+")</span></div>";
+    h += "<div class='td-field'><span class='td-label'>Waliofaulu</span><span class='td-val' style='color:#22c55e'>"+passed+"/"+scores.length+" ("+passRate+"%)</span></div>";
+    h += "<div class='td-field'><span class='td-label'>Waliofeli</span><span class='td-val' style='color:#ef4444'>"+(scores.length-passed)+"/"+scores.length+"</span></div>";
+    h += "</div>";
+  }
+
+  // ── Students list with scores ──
+  h += "<div class='td-section'>";
+  h += "<div class='td-section-title'>Wanafunzi ("+ studs.length+")</div>";
+  if(!studs.length){
+    h += "<p class='empty' style='padding:8px 0'>Hakuna wanafunzi katika darasa hili.</p>";
+  } else {
+    // Sort: scored first, then unscored
+    const withScore  = studs.filter(s=>getScore(s._id,t.subjectId)!=="")
+                            .sort((a,b)=>Number(getScore(b._id,t.subjectId))-Number(getScore(a._id,t.subjectId)));
+    const noScore    = studs.filter(s=>getScore(s._id,t.subjectId)==="");
+    const sorted     = [...withScore,...noScore];
+
+    h += sorted.map((s,i)=>{
+      const sc = sub ? getScore(s._id,t.subjectId) : "";
+      const g  = sc!=="" ? getGrade(Number(sc)) : null;
+      return "<div class='td-student-row'>"+
+        "<span style='font-size:12px;color:#475569;min-width:20px'>#"+(i+1)+"</span>"+
+        "<span style='flex:1;font-size:13px;color:#e2e8f0'>"+esc(s.name)+"</span>"+
+        (g
+          ? "<span class='td-score-chip' style='background:"+g.color+"20;color:"+g.color+"'>"+sc+" ("+g.label+")</span>"
+          : "<span style='font-size:11px;color:#334155'>Haijaingiwa</span>"
+        )+
+      "</div>";
+    }).join("");
+  }
+  h += "</div>";
+
+  // ── Reset password ──
+  h += "<div class='td-section'>";
+  h += "<div class='td-section-title'>Badilisha Nywila</div>";
+  h += "<div style='display:flex;gap:8px;align-items:center'>";
+  h += "<input type='password' id='td-new-pass' placeholder='Nywila mpya...' style='flex:1;margin-bottom:0' autocomplete='new-password'>";
+  h += "<button class='btn btn-sm' style='background:#6366f1;white-space:nowrap' onclick='resetTeacherPass(\""+esc(t._id||t.id)+"\")'>Hifadhi<\/button>";
+  h += "</div>";
+  h += "</div>";
+
+  // ── Action buttons ──
+  h += "<div class='td-action-bar'>";
+  h += "<button class='btn btn-sm' style='background:#1d4ed8;flex:1' onclick=\"G('teacher-detail-modal').classList.remove('open');openEditTeacher('"+esc(t._id||t.id)+"')\">&#9998; Hariri Taarifa<\/button>";
+  h += "<button class='btn btn-sm btn-danger' style='flex:1' onclick=\"if(confirm('Futa "+esc(t.name)+"?')){G('teacher-detail-modal').classList.remove('open');removeTeacher('"+esc(t._id||t.id)+"')}\">&#128465; Futa<\/button>";
+  h += "</div>";
+
+  G("teacher-detail-content").innerHTML = h;
+  G("teacher-detail-modal").classList.add("open");
+}
+
+// ── Reset teacher password ──
+async function resetTeacherPass(tid){
+  const inp = G("td-new-pass");
+  if(!inp) return;
+  const p = inp.value.trim();
+  if(!p)         { toast("Weka nywila mpya","red"); return; }
+  if(p.length<4) { toast("Nywila ni fupi sana","red"); return; }
+
+  const hp  = hashPass(p);
+  const idx = cache.users.findIndex(u=>(u._id||u.id)===tid);
+  if(idx>-1) cache.users[idx].password = hp;
+
+  if(fbReady) await fsSet("gx_users", tid, {password: hp});
+  else saveLocalCache();
+
+  inp.value = "";
+  toast("&#10003; Nywila imebadilishwa","green");
+}
+
+// ══ WELCOME OVERLAY ══
+function dismissWelcome(){
+  const el=G("welcome-overlay");
+  if(el)el.style.display="none";
+  localStorage.setItem("mc_welcomed","1");
+}
+function checkWelcome(){
+  const el=G("welcome-overlay");
+  if(el && localStorage.getItem("mc_welcomed")) el.style.display="none";
+}
+
+// ══ PWA ══
+let deferredPrompt;
+window.addEventListener("beforeinstallprompt",e=>{e.preventDefault();deferredPrompt=e;G("install-btn").style.display="flex"});
+window.addEventListener("appinstalled",()=>{G("install-btn").style.display="none";toast("App imewekwa!")});
+function installApp(){if(deferredPrompt){deferredPrompt.prompt();deferredPrompt.userChoice.then(()=>{deferredPrompt=null})}}
+if("serviceWorker" in navigator){
+  const swCode = `
+    const CACHE='galaxy-core-v1';
+    const FILES=['./galaxy-core.html'];
+    self.addEventListener('install',e=>{e.waitUntil(caches.open(CACHE).then(c=>c.addAll(FILES)));self.skipWaiting()});
+    self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))));self.clients.claim()});
+    self.addEventListener('fetch',e=>{e.respondWith(caches.match(e.request).then(cached=>cached||fetch(e.request).catch(()=>cached)))});
+  `;
+  const blob = new Blob([swCode], {type:'application/javascript'});
+  const url = URL.createObjectURL(blob);
+  navigator.serviceWorker.register(url).catch(()=>{});
+}
+
+// Show offline warning on login screen
+if(!navigator.onLine) G("offline-badge").style.display="block";
+window.addEventListener("online",()=>{G("offline-badge").style.display="none"});
+window.addEventListener("offline",()=>{G("offline-badge").style.display="block"});
+
+// ══ INIT ══
+// Start app
+checkWelcome();
+initData()
+  .then(()=>{ console.log("Galaxy Core ready ✓"); })
+  .catch(e=>{
+    console.error("Init error:", e);
+    // Even on error — hide loading and show login
+    hideLoading();
+    ensureLocalAdmin();
+  });
+</script>
+</body>
+</html>
