@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="sw">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Matokeo Core - Galaxy</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+</head>
+<body>
+
+    <div id="login-page" class="container fadeIn">
+        <div class="card">
+            <h1>Galaxy Core 🌌</h1>
+            <p>Ingia kama Mwalimu</p>
+            <form id="login-form">
+                <input type="text" id="username" placeholder="Jina (Zamer)" required>
+                <input type="password" id="password" placeholder="Password (admin123)" required>
+                <button type="submit">INGIA KWENYE MFUMO</button>
+            </form>
+            <p id="login-message"></p>
+        </div>
+    </div>
+
+    <div id="dashboard-page" class="container" style="display:none;">
+        <div class="card">
+            <h2>Karibu Kwenye Panel ya Matokeo</h2>
+            <p>Hapa ndipo utaweka maksi za wanafunzi.</p>
+            <button onclick="logout()">Log Out</button>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</htm
+  l>
